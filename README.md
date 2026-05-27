@@ -9,6 +9,8 @@ A clean, shareable web app for memorizing Quran recitation. Select any Surah and
 - **14 reciters** — multiple styles (Murattal / Mujawwad / Muallim)
 - **Repeat control** — repeat N times or loop infinitely
 - **Speed control** — 0.5× to 2× playback rate
+- **Repeat pause** — insert a fixed or recitation-length practice pause after each ayah
+- **Background-aware playback** — a persistent audio session and lock-screen media controls where supported
 - **Per-ayah progress** — dots indicator for up to 20 ayahs; always shows current ayah count
 - **Shareable links** — click "Share This Session" to copy a URL that restores the exact session
 - **Mobile-friendly** — responsive Tailwind CSS design
@@ -18,6 +20,12 @@ A clean, shareable web app for memorizing Quran recitation. Select any Surah and
 Audio is streamed from [EveryAyah.com](https://everyayah.com) — a free, publicly available Quran audio CDN. Individual ayah MP3s are loaded sequentially to build the segment playlist.
 
 No audio is downloaded or stored. All playback is streamed.
+
+The player keeps one HTML audio element active for the session. When a repeat pause
+is selected, it plays a locally generated silent media segment for the pause rather
+than waiting on a background JavaScript timer. This allows the next ayah transition
+to be driven by media `ended` events while the screen is locked or the browser is
+backgrounded, where supported by the mobile browser and OS.
 
 ## Tech Stack
 
@@ -133,8 +141,21 @@ src/
 
 - **Audio is from a public CDN** — if everyayah.com is unreachable or rate-limits, audio may fail to load. An error message is shown.
 - **No offline support** — requires internet connection to stream audio.
-- **Speed control** — changes take effect on the next ayah load (browser limitation with programmatic Audio).
 - **Autoplay policy** — some browsers block autoplay without a user gesture. The Play button provides the gesture.
+- **Background playback is best effort** — the app keeps one audio session active,
+  uses silent media for repetition gaps, and recovers after visibility interruptions.
+  Mobile Safari/Chrome or the OS can still suspend playback under device policy.
+- **Force-closing cannot be supported** — playback cannot continue if the browser is
+  force-quit, the tab is killed by the OS, or the browser app is fully closed.
+
+## Testing Background Playback on a Phone
+
+1. Open the deployed app on iPhone Safari or Android Chrome.
+2. Choose Surah 36, ayahs 1 through 5, and Mishary Rashid Alafasy.
+3. Set repeat count to 3 and pause duration to 10 seconds.
+4. Tap Play once, then lock the phone or switch to another app.
+5. Confirm playback continues through the silent repeat pause into the next ayah.
+6. Unlock or return to the browser and verify the current ayah and repeat count remain correct.
 
 ## Suggested Improvements
 

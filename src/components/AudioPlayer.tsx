@@ -2,13 +2,20 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { PlayerState, PlaybackStatus } from "@/types";
-import { buildPlaylist, formatTime } from "@/lib/audioUtils";
+import { buildPlaylist, createSilentAudioUrl, formatTime } from "@/lib/audioUtils";
 import { getSurah } from "@/lib/surahData";
 import { getReciter } from "@/lib/reciters";
 import { useApp } from "@/contexts/AppContext";
 
 interface Props {
   playerState: PlayerState;
+}
+
+type PlaybackPhase = "idle" | "recitation" | "gap";
+
+interface NextItem {
+  ayah: number;
+  repeat: number;
 }
 
 export default function AudioPlayer({ playerState }: Props) {
@@ -38,14 +45,18 @@ export default function AudioPlayer({ playerState }: Props) {
   const playlistRef = useRef(playlist);
   const statusRef = useRef(status);
   const playerStateRef = useRef(playerState);
+  const trRef = useRef(tr);
   const isStoppedRef = useRef(false);
-  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pauseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const doNextRef = useRef<(() => void) | null>(null);
+  const shouldPlayRef = useRef(false);
+  const phaseRef = useRef<PlaybackPhase>("idle");
+  const nextItemRef = useRef<NextItem | null>(null);
+  const silentAudioUrlRef = useRef<string | null>(null);
+  const endedHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => { playlistRef.current = playlist; }, [playlist]);
   useEffect(() => { statusRef.current = status; }, [status]);
   useEffect(() => { playerStateRef.current = playerState; }, [playerState]);
+  useEffect(() => { trRef.current = tr; }, [tr]);
 
   const surah = getSurah(playerState.surahNumber);
   const reciter = getReciter(playerState.reciterId);
@@ -56,19 +67,58 @@ export default function AudioPlayer({ playerState }: Props) {
     [playerState.startAyah]
   );
 
-  const clearPauseTimers = useCallback(() => {
-    if (pauseTimerRef.current) { clearTimeout(pauseTimerRef.current); pauseTimerRef.current = null; }
-    if (pauseIntervalRef.current) { clearInterval(pauseIntervalRef.current); pauseIntervalRef.current = null; }
-    doNextRef.current = null;
+  const updateMediaSessionState = useCallback((state: MediaSessionPlaybackState) => {
+    if ("mediaSession" in navigator) navigator.mediaSession.playbackState = state;
+  }, []);
+
+  const releaseSilentAudio = useCallback(() => {
+    if (silentAudioUrlRef.current) {
+      URL.revokeObjectURL(silentAudioUrlRef.current);
+      silentAudioUrlRef.current = null;
+    }
+  }, []);
+
+  const updateMediaMetadata = useCallback((ayahNumber: number) => {
+    if (!("mediaSession" in navigator) || !("MediaMetadata" in window)) return;
+    const ps = playerStateRef.current;
+    const currentSurah = getSurah(ps.surahNumber);
+    const currentReciter = getReciter(ps.reciterId);
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `${currentSurah?.englishName ?? "Quran"} - Ayah ${ayahNumber}`,
+      artist: currentReciter?.name ?? "Quran Recitation",
+      album: "حامل القرآن",
+      artwork: [
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+    });
+  }, []);
+
+  const beginCurrentMedia = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !shouldPlayRef.current || isStoppedRef.current) return;
+    audio.playbackRate = phaseRef.current === "gap" ? 1 : playerStateRef.current.speed;
+    void audio.play().catch(() => {
+      if (document.visibilityState === "visible") {
+        setStatus((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: trRef.current("playBlocked"),
+        }));
+      }
+    });
   }, []);
 
   const loadAndPlay = useCallback((ayahNumber: number, repeatNum: number) => {
-    clearPauseTimers();
+    releaseSilentAudio();
     const ps = playerStateRef.current;
     const pl = playlistRef.current;
     const idx = ayahNumber - ps.startAyah;
     if (idx < 0 || idx >= pl.length) return;
 
+    phaseRef.current = "recitation";
+    nextItemRef.current = null;
+    updateMediaMetadata(ayahNumber);
     setStatus((prev) => ({
       ...prev,
       isLoading: true,
@@ -86,16 +136,90 @@ export default function AudioPlayer({ playerState }: Props) {
       audioRef.current.pause();
       audioRef.current.src = pl[idx];
       audioRef.current.load();
-      // playbackRate applied in onCanPlay — audio.load() resets it to 1.0 in some browsers
+      // Call play while still in the initial tap stack; subsequent transitions
+      // reuse the same authorized media element on mobile.
+      beginCurrentMedia();
     }
-  }, [clearPauseTimers]);
+  }, [beginCurrentMedia, releaseSilentAudio, updateMediaMetadata]);
+
+  const completeSession = useCallback(() => {
+    shouldPlayRef.current = false;
+    isStoppedRef.current = true;
+    phaseRef.current = "idle";
+    nextItemRef.current = null;
+    releaseSilentAudio();
+    updateMediaSessionState("none");
+    setStatus((prev) => ({
+      ...prev,
+      isPlaying: false,
+      isLoading: false,
+      isPausing: false,
+      pauseRemaining: 0,
+      currentAyah: playerStateRef.current.startAyah,
+      currentRepeat: 1,
+      currentTime: 0,
+    }));
+  }, [releaseSilentAudio, updateMediaSessionState]);
+
+  const loadSilentGap = useCallback((seconds: number, nextItem: NextItem) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    releaseSilentAudio();
+    phaseRef.current = "gap";
+    nextItemRef.current = nextItem;
+    silentAudioUrlRef.current = createSilentAudioUrl(seconds);
+    setStatus((prev) => ({
+      ...prev,
+      isLoading: true,
+      isPlaying: false,
+      isPausing: true,
+      pauseRemaining: Math.ceil(seconds),
+    }));
+    audio.pause();
+    audio.src = silentAudioUrlRef.current;
+    audio.load();
+    beginCurrentMedia();
+  }, [beginCurrentMedia, releaseSilentAudio]);
+
+  const advanceAfterAyah = useCallback((ayahDuration: number) => {
+    const current = statusRef.current;
+    const ps = playerStateRef.current;
+    const nextAyah = current.currentAyah + 1;
+    let nextItem: NextItem | null = null;
+
+    if (nextAyah <= ps.endAyah) {
+      nextItem = { ayah: nextAyah, repeat: current.currentRepeat };
+    } else {
+      const maxRepeats = ps.infiniteRepeat ? Infinity : ps.repeatCount;
+      const nextRepeat = current.currentRepeat + 1;
+      if (nextRepeat <= maxRepeats) nextItem = { ayah: ps.startAyah, repeat: nextRepeat };
+    }
+
+    if (!nextItem) {
+      completeSession();
+      return;
+    }
+
+    const pauseSeconds = ps.pauseAfterAyah === -1 ? ayahDuration : ps.pauseAfterAyah;
+    if (pauseSeconds > 0) {
+      loadSilentGap(pauseSeconds, nextItem);
+    } else {
+      loadAndPlay(nextItem.ayah, nextItem.repeat);
+    }
+  }, [completeSession, loadAndPlay, loadSilentGap]);
 
   const stop = useCallback(() => {
     isStoppedRef.current = true;
-    clearPauseTimers();
+    shouldPlayRef.current = false;
+    phaseRef.current = "idle";
+    nextItemRef.current = null;
+    releaseSilentAudio();
+    updateMediaSessionState("none");
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = "";
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
     }
     setStatus((prev) => ({
       ...prev,
@@ -106,72 +230,93 @@ export default function AudioPlayer({ playerState }: Props) {
       currentTime: 0,
       duration: 0,
     }));
-  }, [clearPauseTimers]);
+  }, [releaseSilentAudio, updateMediaSessionState]);
 
   const play = useCallback(() => {
     isStoppedRef.current = false;
-    loadAndPlay(playerState.startAyah, 1);
-  }, [playerState.startAyah, loadAndPlay]);
+    shouldPlayRef.current = true;
+    if (phaseRef.current !== "idle" && audioRef.current?.src && audioRef.current.paused) {
+      beginCurrentMedia();
+    } else {
+      loadAndPlay(playerStateRef.current.startAyah, 1);
+    }
+  }, [beginCurrentMedia, loadAndPlay]);
 
   const pause = useCallback(() => {
+    shouldPlayRef.current = false;
     if (audioRef.current && !audioRef.current.paused) {
       audioRef.current.pause();
       setStatus((prev) => ({ ...prev, isPlaying: false }));
     }
-  }, []);
-
-  const resume = useCallback(() => {
-    if (audioRef.current && audioRef.current.paused && audioRef.current.src) {
-      audioRef.current.play().catch(() => {});
-      setStatus((prev) => ({ ...prev, isPlaying: true }));
-    }
-  }, []);
+    updateMediaSessionState("paused");
+  }, [updateMediaSessionState]);
 
   const skipPause = useCallback(() => {
-    clearPauseTimers();
+    const nextItem = nextItemRef.current;
+    if (!nextItem) return;
+    shouldPlayRef.current = true;
+    isStoppedRef.current = false;
+    if (audioRef.current) audioRef.current.pause();
+    releaseSilentAudio();
+    nextItemRef.current = null;
     setStatus((prev) => ({ ...prev, isPausing: false, pauseRemaining: 0 }));
-    if (doNextRef.current) {
-      const fn = doNextRef.current;
-      doNextRef.current = null;
-      fn();
-    }
-  }, [clearPauseTimers]);
+    loadAndPlay(nextItem.ayah, nextItem.repeat);
+  }, [loadAndPlay, releaseSilentAudio]);
 
   const skipNext = useCallback(() => {
+    if (phaseRef.current === "gap") {
+      skipPause();
+      return;
+    }
+    if (!shouldPlayRef.current) return;
     const s = statusRef.current;
     const ps = playerStateRef.current;
     if (s.currentAyah < ps.endAyah) loadAndPlay(s.currentAyah + 1, s.currentRepeat);
-  }, [loadAndPlay]);
+  }, [loadAndPlay, skipPause]);
 
   const skipPrev = useCallback(() => {
+    if (!shouldPlayRef.current) return;
     const s = statusRef.current;
     const ps = playerStateRef.current;
     if (s.currentAyah > ps.startAyah) loadAndPlay(s.currentAyah - 1, s.currentRepeat);
   }, [loadAndPlay]);
 
-  // Wire up audio element events
+  // One mounted <audio> element owns the full session. For configured pauses,
+  // it plays a silent WAV item rather than idling on a JavaScript timer. This
+  // keeps a media session active when phone screens lock or pages background.
   useEffect(() => {
-    const audio = new Audio();
+    const audio = audioRef.current;
+    if (!audio) return;
     audio.preload = "auto";
-    audioRef.current = audio;
 
     const onCanPlay = () => {
-      if (isStoppedRef.current) return;
-      audio.playbackRate = playerStateRef.current.speed;
       setStatus((prev) => ({ ...prev, isLoading: false }));
-      audio.play().catch(() => {
-        setStatus((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: tr("playBlocked"),
-        }));
-      });
+      beginCurrentMedia();
     };
 
-    const onPlay = () => setStatus((prev) => ({ ...prev, isPlaying: true, error: null }));
-    const onPause = () => setStatus((prev) => ({ ...prev, isPlaying: false }));
+    const onPlay = () => {
+      updateMediaSessionState("playing");
+      setStatus((prev) => ({
+        ...prev,
+        isLoading: false,
+        isPlaying: phaseRef.current === "recitation",
+        error: null,
+      }));
+    };
+    const onPause = () => {
+      if (!shouldPlayRef.current) updateMediaSessionState("paused");
+      setStatus((prev) => ({ ...prev, isPlaying: false }));
+    };
 
     const onTimeUpdate = () => {
+      if (phaseRef.current === "gap") {
+        const duration = isNaN(audio.duration) ? 0 : audio.duration;
+        setStatus((prev) => ({
+          ...prev,
+          pauseRemaining: Math.max(0, Math.ceil(duration - audio.currentTime)),
+        }));
+        return;
+      }
       setStatus((prev) => ({
         ...prev,
         currentTime: audio.currentTime,
@@ -180,69 +325,17 @@ export default function AudioPlayer({ playerState }: Props) {
     };
 
     const onEnded = () => {
-      if (isStoppedRef.current) return;
-      const s = statusRef.current;
-      const ayahDuration = isNaN(audio.duration) ? 0 : audio.duration;
-
-      const doNext = () => {
-        if (isStoppedRef.current) return;
-        const ps = playerStateRef.current;
-        const nextAyah = s.currentAyah + 1;
-
-        if (nextAyah <= ps.endAyah) {
-          loadAndPlay(nextAyah, s.currentRepeat);
-        } else {
-          const maxRepeats = ps.infiniteRepeat ? Infinity : ps.repeatCount;
-          const nextRepeat = s.currentRepeat + 1;
-          if (nextRepeat <= maxRepeats) {
-            loadAndPlay(ps.startAyah, nextRepeat);
-          } else {
-            setStatus((prev) => ({
-              ...prev,
-              isPlaying: false,
-              isPausing: false,
-              pauseRemaining: 0,
-              currentAyah: ps.startAyah,
-              currentRepeat: 1,
-              currentTime: 0,
-            }));
-          }
-        }
-      };
-
-      const ps = playerStateRef.current;
-      const pauseSecs = ps.pauseAfterAyah === -1 ? ayahDuration : ps.pauseAfterAyah;
-
-      if (pauseSecs > 0) {
-        doNextRef.current = doNext;
-        let remaining = Math.ceil(pauseSecs);
-        setStatus((prev) => ({ ...prev, isPlaying: false, isPausing: true, pauseRemaining: remaining }));
-
-        pauseIntervalRef.current = setInterval(() => {
-          if (isStoppedRef.current) {
-            if (pauseIntervalRef.current) { clearInterval(pauseIntervalRef.current); pauseIntervalRef.current = null; }
-            return;
-          }
-          remaining -= 1;
-          setStatus((prev) => ({ ...prev, pauseRemaining: Math.max(0, remaining) }));
-          if (remaining <= 0 && pauseIntervalRef.current) {
-            clearInterval(pauseIntervalRef.current);
-            pauseIntervalRef.current = null;
-          }
-        }, 1000);
-
-        pauseTimerRef.current = setTimeout(() => {
-          if (pauseIntervalRef.current) { clearInterval(pauseIntervalRef.current); pauseIntervalRef.current = null; }
-          if (!isStoppedRef.current) {
-            setStatus((prev) => ({ ...prev, isPausing: false, pauseRemaining: 0 }));
-          }
-          doNextRef.current = null;
-          doNext();
-        }, pauseSecs * 1000);
-      } else {
-        doNext();
+      if (!shouldPlayRef.current || isStoppedRef.current) return;
+      if (phaseRef.current === "gap") {
+        const nextItem = nextItemRef.current;
+        releaseSilentAudio();
+        nextItemRef.current = null;
+        if (nextItem) loadAndPlay(nextItem.ayah, nextItem.repeat);
+        return;
       }
+      advanceAfterAyah(isNaN(audio.duration) ? 0 : audio.duration);
     };
+    endedHandlerRef.current = onEnded;
 
     const onError = () => {
       if (isStoppedRef.current) return;
@@ -250,7 +343,7 @@ export default function AudioPlayer({ playerState }: Props) {
         ...prev,
         isLoading: false,
         isPlaying: false,
-        error: tr("audioError"),
+        error: trRef.current("audioError"),
       }));
     };
 
@@ -263,7 +356,9 @@ export default function AudioPlayer({ playerState }: Props) {
 
     return () => {
       audio.pause();
-      audio.src = "";
+      audio.removeAttribute("src");
+      audio.load();
+      endedHandlerRef.current = null;
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
@@ -271,20 +366,63 @@ export default function AudioPlayer({ playerState }: Props) {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
     };
-  }, [loadAndPlay, tr]);
+  }, [advanceAfterAyah, beginCurrentMedia, loadAndPlay, releaseSilentAudio, updateMediaSessionState]);
+
+  // Media Session gives mobile lock screens transport controls when supported.
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    const actions: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
+      ["play", play],
+      ["pause", pause],
+      ["nexttrack", skipNext],
+      ["previoustrack", skipPrev],
+    ];
+    actions.forEach(([action, handler]) => {
+      try { navigator.mediaSession.setActionHandler(action, handler); } catch { /* unsupported action */ }
+    });
+    return () => {
+      actions.forEach(([action]) => {
+        try { navigator.mediaSession.setActionHandler(action, null); } catch { /* unsupported action */ }
+      });
+    };
+  }, [pause, play, skipNext, skipPrev]);
+
+  // If the OS interrupts media while hidden, recover when the document returns.
+  // A force-closed/killed tab cannot be recovered by web code.
+  useEffect(() => {
+    const recoverPlayback = () => {
+      if (document.visibilityState !== "visible" || !shouldPlayRef.current || isStoppedRef.current) return;
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (audio.ended) {
+        endedHandlerRef.current?.();
+      } else if (audio.paused) {
+        beginCurrentMedia();
+      }
+    };
+    document.addEventListener("visibilitychange", recoverPlayback);
+    return () => document.removeEventListener("visibilitychange", recoverPlayback);
+  }, [beginCurrentMedia]);
 
   // Re-apply speed when user changes it (while audio is playing)
   useEffect(() => {
-    if (audioRef.current) audioRef.current.playbackRate = playerState.speed;
+    if (audioRef.current && phaseRef.current === "recitation") {
+      audioRef.current.playbackRate = playerState.speed;
+    }
   }, [playerState.speed]);
 
   // Reset when core selection changes
   useEffect(() => {
     isStoppedRef.current = true;
-    clearPauseTimers();
+    shouldPlayRef.current = false;
+    phaseRef.current = "idle";
+    nextItemRef.current = null;
+    releaseSilentAudio();
+    updateMediaSessionState("none");
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = "";
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
     }
     setStatus({
       isPlaying: false,
@@ -306,7 +444,9 @@ export default function AudioPlayer({ playerState }: Props) {
   const ayahProgress = getAyahIndex(status.currentAyah) + 1;
 
   return (
-    <div className={theme.playerCard}>
+    <>
+      <audio ref={audioRef} preload="auto" playsInline className="hidden" aria-hidden="true" />
+      <div className={theme.playerCard}>
       {/* ── Player header ──────────────────────────────────────────────── */}
       <div className={`${theme.playerHeader} px-6 py-5`}>
         <div className="flex items-start justify-between">
@@ -528,6 +668,7 @@ export default function AudioPlayer({ playerState }: Props) {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
