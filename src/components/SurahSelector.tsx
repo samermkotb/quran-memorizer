@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { SURAHS, searchSurahs } from "@/lib/surahData";
 import { Surah } from "@/types";
+import { useApp } from "@/contexts/AppContext";
 
 interface Props {
   value: number;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function SurahSelector({ value, onChange }: Props) {
+  const { theme, tr, lang } = useApp();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,57 +51,68 @@ export default function SurahSelector({ value, onChange }: Props) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white border-2 border-emerald-200 rounded-xl text-left hover:border-emerald-400 focus:outline-none focus:border-emerald-500 transition-colors"
+        className={`w-full flex items-center justify-between px-4 py-3 text-start focus:outline-none transition-colors ${theme.dropTrigger}`}
       >
         {selected ? (
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 rounded-lg px-2 py-1 min-w-[2.5rem] text-center">
+            <span className={`text-xs font-bold rounded-lg px-2 py-1 min-w-[2.5rem] text-center ${theme.dropNum}`}>
               {selected.number}
             </span>
             <div>
-              <div className="font-semibold text-gray-800">{selected.englishName}</div>
-              <div className="text-xs text-gray-500">{selected.name} · {selected.numberOfAyahs} ayahs</div>
+              <div className={`font-semibold ${theme.primary}`}>
+                {lang === "ar" ? selected.name : selected.englishName}
+              </div>
+              <div className={`text-xs ${theme.muted}`}>
+                {lang === "ar" ? selected.englishName : selected.name} · {selected.numberOfAyahs} {tr("ayahCount")}
+              </div>
             </div>
           </div>
         ) : (
-          <span className="text-gray-400">Select a Surah...</span>
+          <span className={theme.muted}>{tr("selectSurah")}</span>
         )}
-        <svg className={`w-5 h-5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg
+          className={`w-5 h-5 flex-shrink-0 transition-transform ${theme.muted} ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute z-50 w-full mt-2 bg-white border-2 border-emerald-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="p-3 border-b border-gray-100">
+        <div className={`absolute z-50 w-full mt-2 overflow-hidden ${theme.dropdown}`}>
+          <div className={`p-3 border-b ${theme.muted}`} style={{ borderColor: "inherit" }}>
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search surah name or number..."
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-400"
+              placeholder={tr("searchSurah")}
+              className={`w-full px-3 py-2 text-sm focus:outline-none ${theme.dropSearch}`}
             />
           </div>
           <ul ref={listRef} className="max-h-64 overflow-y-auto">
             {results.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-gray-400 text-center">No surahs found</li>
+              <li className={`px-4 py-3 text-sm text-center ${theme.muted}`}>{tr("noSurahs")}</li>
             ) : (
               results.map((surah) => (
                 <li key={surah.number}>
                   <button
                     type="button"
                     onClick={() => select(surah)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50 transition-colors ${
-                      surah.number === value ? "bg-emerald-50 text-emerald-700" : "text-gray-700"
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-start transition-colors ${
+                      surah.number === value ? theme.dropItemActive : theme.dropItem
                     }`}
                   >
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 rounded-md px-1.5 py-0.5 min-w-[2rem] text-center">
+                    <span className={`text-xs font-bold rounded-md px-1.5 py-0.5 min-w-[2rem] text-center flex-shrink-0 ${theme.dropNum}`}>
                       {surah.number}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">{surah.englishName}</div>
-                      <div className="text-xs text-gray-400 truncate">{surah.name} · {surah.numberOfAyahs} ayahs · {surah.revelationType}</div>
+                      <div className={`font-medium text-sm ${theme.primary}`}>
+                        {lang === "ar" ? surah.name : surah.englishName}
+                      </div>
+                      <div className={`text-xs truncate ${theme.muted}`}>
+                        {lang === "ar" ? surah.englishName : surah.name} · {surah.numberOfAyahs} {tr("ayahCount")}
+                      </div>
                     </div>
                   </button>
                 </li>

@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Quran Memorizer — Listen & Repeat",
+  title: "حامل القرآن — Listen & Repeat",
   description:
     "Listen to any Quran segment with your choice of reciter, repeat ayahs for memorization, and share sessions with friends.",
   keywords: ["Quran", "Memorization", "Hafiz", "Islamic", "Audio", "Reciter"],
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Quran Memorizer",
+    title: "حامل القرآن",
   },
 };
 
@@ -32,10 +33,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.className} bg-gradient-to-br from-emerald-50 via-white to-teal-50 min-h-screen antialiased`}
-      >
-        {children}
+      <body className={`${inter.className} antialiased`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

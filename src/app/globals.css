@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Islamic star-lattice pattern for adult mode (very subtle, 2% opacity) */
+.islamic-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23d4af37' fill-opacity='0.04'%3E%3Cpath d='M40 0l5 15h15l-12 9 5 15-13-9-13 9 5-15-12-9h15z'/%3E%3Cpath d='M40 50l5 15h15l-12 9 5 15-13-9-13 9 5-15-12-9h15z' opacity='0.5'/%3E%3C/g%3E%3C/svg%3E");
+}
+
 @layer utilities {
   .animate-in {
     animation-fill-mode: both;

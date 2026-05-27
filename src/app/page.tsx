@@ -5,6 +5,8 @@ import { PlayerState } from "@/types";
 import { SURAHS, getSurah } from "@/lib/surahData";
 import { DEFAULT_RECITER_ID, getReciter } from "@/lib/reciters";
 import { decodeShareUrl } from "@/lib/shareUtils";
+import { useApp } from "@/contexts/AppContext";
+import { ChildBoy, ChildGirl, ChildBoy2, ChildGirl2 } from "@/components/ChildIllustrations";
 import SurahSelector from "@/components/SurahSelector";
 import ReciterSelector from "@/components/ReciterSelector";
 import AudioPlayer from "@/components/AudioPlayer";
@@ -23,19 +25,20 @@ const DEFAULT_STATE: PlayerState = {
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-const PAUSE_OPTIONS = [
-  { label: "Off", value: 0 },
-  { label: "3s", value: 3 },
-  { label: "5s", value: 5 },
-  { label: "10s", value: 10 },
-  { label: "15s", value: 15 },
-  { label: "30s", value: 30 },
-  { label: "Match", value: -1 },
-];
-
 export default function Home() {
+  const { theme, tr, mode, setMode, lang, setLang } = useApp();
   const [playerState, setPlayerState] = useState<PlayerState>(DEFAULT_STATE);
   const [committed, setCommitted] = useState(false);
+
+  const PAUSE_OPTIONS = [
+    { label: tr("pauseOff"), value: 0 },
+    { label: "3s", value: 3 },
+    { label: "5s", value: 5 },
+    { label: "10s", value: 10 },
+    { label: "15s", value: 15 },
+    { label: "30s", value: 30 },
+    { label: tr("pauseMatch"), value: -1 },
+  ];
 
   // Load from URL on mount
   useEffect(() => {
@@ -46,9 +49,10 @@ export default function Home() {
         const maxAyah = surah.numberOfAyahs;
         const start = Math.min(decoded.startAyah ?? 1, maxAyah);
         const end = Math.min(decoded.endAyah ?? maxAyah, maxAyah);
-        const reciterId = decoded.reciterId && getReciter(decoded.reciterId)
-          ? decoded.reciterId
-          : DEFAULT_RECITER_ID;
+        const reciterId =
+          decoded.reciterId && getReciter(decoded.reciterId)
+            ? decoded.reciterId
+            : DEFAULT_RECITER_ID;
 
         setPlayerState({
           surahNumber: decoded.surahNumber,
@@ -71,54 +75,155 @@ export default function Home() {
   const update = useCallback((patch: Partial<PlayerState>) => {
     setPlayerState((prev) => {
       const next = { ...prev, ...patch };
-      // Clamp ayahs on surah change
       if (patch.surahNumber !== undefined) {
         const s = getSurah(patch.surahNumber);
         const max = s?.numberOfAyahs ?? 1;
         next.startAyah = 1;
         next.endAyah = max;
       }
-      // Keep start <= end
       if (next.startAyah > next.endAyah) next.endAyah = next.startAyah;
       if (next.endAyah < next.startAyah) next.startAyah = next.endAyah;
-      // Clamp to surah bounds
       const max2 = getSurah(next.surahNumber)?.numberOfAyahs ?? 1;
       next.startAyah = Math.max(1, Math.min(next.startAyah, max2));
       next.endAyah = Math.max(1, Math.min(next.endAyah, max2));
       return next;
     });
-    // Speed, repeat count, and infinite repeat update live — don't hide the player.
-    // Surah/ayah/reciter changes are handled by AudioPlayer's own reset effect.
   }, []);
 
-  function handleStart() {
-    setCommitted(true);
-  }
+  const isChild = theme.isChild;
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="text-center pt-4 pb-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-500 rounded-2xl mb-4 shadow-lg">
-            <span className="text-white text-2xl font-bold" style={{ fontFamily: "serif" }}>
-              ق
-            </span>
+    <div className={`${theme.pageBg} min-h-screen`}>
+      {theme.pagePattern && <div className="fixed inset-0 islamic-pattern pointer-events-none" />}
+
+      {/* ── Top Bar ─────────────────────────────────────────────────── */}
+      <div className={`sticky top-0 z-50 ${theme.topBar}`}>
+        <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+          {/* Mode toggle */}
+          <div className="flex items-center gap-1 p-0.5 bg-black/10 rounded-xl">
+            <button
+              onClick={() => setMode("adult")}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${mode === "adult" ? theme.modeActive : theme.modeInactive}`}
+            >
+              {isChild ? "👤 " : ""}{tr("modeAdult")}
+            </button>
+            <button
+              onClick={() => setMode("child")}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${mode === "child" ? theme.modeActive : theme.modeInactive}`}
+            >
+              {isChild ? "🧒 " : ""}{tr("modeChild")}
+            </button>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Quran Memorizer
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Listen · Repeat · Memorize
-          </p>
+
+          {/* Language toggle */}
+          <div className="flex items-center gap-1 p-0.5 bg-black/10 rounded-xl">
+            <button
+              onClick={() => setLang("en")}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${lang === "en" ? theme.langActive : theme.langInactive}`}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setLang("ar")}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${lang === "ar" ? theme.langActive : theme.langInactive}`}
+            >
+              عر
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative max-w-2xl mx-auto px-4 py-6 space-y-6">
+
+        {/* ── Header ──────────────────────────────────────────────────── */}
+        <header className="text-center pt-2 pb-4">
+          {isChild ? (
+            <>
+              {/* On phones, keep the title easy to read and gather the children beneath it. */}
+              <div className="sm:hidden">
+                <div className="text-3xl mb-1 select-none">🌙</div>
+                <h1 className={`text-3xl font-black tracking-tight mb-0.5 ${theme.titleColor}`}>
+                  {tr("appName")}
+                </h1>
+                <div className="flex justify-center gap-0.5 text-lg select-none mb-0.5">⭐⭐⭐</div>
+                <p className={`text-sm font-bold ${theme.subtitleColor}`}>
+                  {tr("childGreeting")}
+                </p>
+                <div className="flex items-end justify-center gap-1 mt-3 mb-1">
+                  <ChildGirl2 className="w-16 h-20 drop-shadow-md" />
+                  <ChildBoy className="w-14 h-18 drop-shadow-md" />
+                  <ChildGirl className="w-14 h-18 drop-shadow-md" />
+                  <ChildBoy2 className="w-16 h-20 drop-shadow-md" />
+                </div>
+              </div>
+
+              {/* Larger screens place the Quran learners around the heading. */}
+              <div className="hidden sm:flex items-end justify-center gap-2 mb-1">
+                {/* Left pair */}
+                <div className="flex items-end gap-1 mb-2">
+                  <ChildGirl2
+                    className="w-16 h-20 drop-shadow-md"
+                    style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.12))" }}
+                  />
+                  <ChildBoy
+                    className="w-14 h-18 drop-shadow-md"
+                    style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.10))" }}
+                  />
+                </div>
+
+                {/* Centre title block */}
+                <div className="text-center px-1 pb-2">
+                  <div className="text-3xl mb-1 select-none">🌙</div>
+                  <h1 className={`text-3xl font-black tracking-tight mb-0.5 ${theme.titleColor}`}>
+                    {tr("appName")}
+                  </h1>
+                  <div className="flex justify-center gap-0.5 text-lg select-none mb-0.5">⭐⭐⭐</div>
+                  <p className={`text-sm font-bold ${theme.subtitleColor}`}>
+                    {tr("childGreeting")}
+                  </p>
+                </div>
+
+                {/* Right pair */}
+                <div className="flex items-end gap-1 mb-2">
+                  <ChildGirl
+                    className="w-14 h-18 drop-shadow-md"
+                    style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.10))" }}
+                  />
+                  <ChildBoy2
+                    className="w-16 h-20 drop-shadow-md"
+                    style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.12))" }}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Ornamental line */}
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="h-px w-16 bg-gradient-to-r from-transparent to-yellow-600/60" />
+                <div className={`w-12 h-12 flex items-center justify-center ${theme.logoBg} rounded-xl shadow-lg`}>
+                  <span className={`text-2xl font-bold ${theme.logoChar}`} style={{ fontFamily: "serif" }}>
+                    ق
+                  </span>
+                </div>
+                <div className="h-px w-16 bg-gradient-to-l from-transparent to-yellow-600/60" />
+              </div>
+              <h1 className={`text-4xl font-bold tracking-tight mb-1 ${theme.titleColor}`} style={{ fontFamily: "serif" }}>
+                {tr("appName")}
+              </h1>
+              <p className={`text-sm ${theme.subtitleColor}`}>{tr("tagline")}</p>
+            </>
+          )}
         </header>
 
-        {/* Selection form */}
-        <div className="bg-white/80 backdrop-blur rounded-2xl border border-emerald-100 shadow-sm p-6 space-y-5">
+        {/* ── Selection Form ───────────────────────────────────────────── */}
+        <div className={`${theme.card} p-6 space-y-5`}>
+
           {/* Surah */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Surah <span className="text-gray-400 font-normal">(Chapter)</span>
+            <label className={`block text-sm mb-2 ${theme.label}`}>
+              {tr("surah")}{" "}
+              <span className={`font-normal text-xs ${theme.muted}`}>({tr("chapter")})</span>
             </label>
             <SurahSelector
               value={playerState.surahNumber}
@@ -129,9 +234,7 @@ export default function Home() {
           {/* Ayah range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                From Ayah
-              </label>
+              <label className={`block text-sm mb-2 ${theme.label}`}>{tr("fromAyah")}</label>
               <input
                 type="number"
                 min={1}
@@ -141,23 +244,24 @@ export default function Home() {
                   const v = Math.max(1, Math.min(parseInt(e.target.value) || 1, maxAyah));
                   update({ startAyah: v });
                 }}
-                className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl text-gray-800 font-medium focus:outline-none focus:border-emerald-500 transition-colors"
+                className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors ${theme.input}`}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                To Ayah
-              </label>
+              <label className={`block text-sm mb-2 ${theme.label}`}>{tr("toAyah")}</label>
               <input
                 type="number"
                 min={playerState.startAyah}
                 max={maxAyah}
                 value={playerState.endAyah}
                 onChange={(e) => {
-                  const v = Math.max(playerState.startAyah, Math.min(parseInt(e.target.value) || playerState.startAyah, maxAyah));
+                  const v = Math.max(
+                    playerState.startAyah,
+                    Math.min(parseInt(e.target.value) || playerState.startAyah, maxAyah)
+                  );
                   update({ endAyah: v });
                 }}
-                className="w-full px-4 py-3 border-2 border-emerald-200 rounded-xl text-gray-800 font-medium focus:outline-none focus:border-emerald-500 transition-colors"
+                className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors ${theme.input}`}
               />
             </div>
           </div>
@@ -165,45 +269,47 @@ export default function Home() {
           {/* Surah info chips */}
           {currentSurah && (
             <div className="flex flex-wrap gap-2">
-              <span className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100">
-                {currentSurah.numberOfAyahs} total ayahs
+              <span className={`text-xs px-3 py-1 ${theme.chip1}`}>
+                {currentSurah.numberOfAyahs} {tr("totalAyahs")}
               </span>
-              <span className="text-xs bg-teal-50 text-teal-700 px-3 py-1 rounded-full border border-teal-100">
-                {currentSurah.revelationType}
+              <span className={`text-xs px-3 py-1 ${theme.chip2}`}>
+                {currentSurah.revelationType === "Meccan" ? tr("meccan") : tr("medinan")}
               </span>
-              <span className="text-xs bg-gray-50 text-gray-600 px-3 py-1 rounded-full border border-gray-100" dir="rtl">
+              <span className={`text-xs px-3 py-1 ${theme.chip3}`} dir="rtl">
                 {currentSurah.name}
               </span>
-              <span className="text-xs bg-gray-50 text-gray-600 px-3 py-1 rounded-full border border-gray-100">
-                {currentSurah.englishNameTranslation}
-              </span>
+              {lang === "en" && (
+                <span className={`text-xs px-3 py-1 ${theme.chip3}`}>
+                  {currentSurah.englishNameTranslation}
+                </span>
+              )}
             </div>
           )}
 
-          {/* Quick range buttons */}
+          {/* Quick range */}
           {currentSurah && (
-            <div className="flex flex-wrap gap-2">
-              <span className="text-xs text-gray-400 self-center">Quick range:</span>
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className={`text-xs ${theme.muted}`}>{tr("quickRange")}</span>
               <button
                 onClick={() => update({ startAyah: 1, endAyah: currentSurah.numberOfAyahs })}
-                className="text-xs px-3 py-1 rounded-full border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors"
+                className={`text-xs px-3 py-1 border transition-colors ${theme.chip}`}
               >
-                Whole Surah
+                {tr("wholeSurah")}
               </button>
               {currentSurah.numberOfAyahs >= 5 && (
                 <button
                   onClick={() => update({ startAyah: 1, endAyah: 5 })}
-                  className="text-xs px-3 py-1 rounded-full border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors"
+                  className={`text-xs px-3 py-1 border transition-colors ${theme.chip}`}
                 >
-                  First 5
+                  {tr("first5")}
                 </button>
               )}
               {currentSurah.numberOfAyahs >= 10 && (
                 <button
                   onClick={() => update({ startAyah: 1, endAyah: 10 })}
-                  className="text-xs px-3 py-1 rounded-full border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors"
+                  className={`text-xs px-3 py-1 border transition-colors ${theme.chip}`}
                 >
-                  First 10
+                  {tr("first10")}
                 </button>
               )}
             </div>
@@ -211,8 +317,9 @@ export default function Home() {
 
           {/* Reciter */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Reciter <span className="text-gray-400 font-normal">(القارئ)</span>
+            <label className={`block text-sm mb-2 ${theme.label}`}>
+              {tr("reciter")}{" "}
+              <span className={`font-normal text-xs ${theme.muted}`}>({tr("reciterSub")})</span>
             </label>
             <ReciterSelector
               value={playerState.reciterId}
@@ -222,29 +329,29 @@ export default function Home() {
 
           {/* Repeat settings */}
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-gray-700">
-              Repeat Settings
-            </label>
+            <label className={`block text-sm ${theme.label}`}>{tr("repeatSettings")}</label>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3 flex-1">
-                <span className="text-sm text-gray-500">Repeat</span>
+                <span className={`text-sm ${theme.muted}`}>{tr("repeat")}</span>
                 <input
                   type="number"
                   min={1}
                   max={99}
                   value={playerState.repeatCount}
                   disabled={playerState.infiniteRepeat}
-                  onChange={(e) => update({ repeatCount: Math.max(1, Math.min(99, parseInt(e.target.value) || 1)) })}
-                  className="w-20 px-3 py-2 border-2 border-emerald-200 rounded-xl text-gray-800 font-medium text-center focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
+                  onChange={(e) =>
+                    update({ repeatCount: Math.max(1, Math.min(99, parseInt(e.target.value) || 1)) })
+                  }
+                  className={`w-20 px-3 py-2 font-medium text-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${theme.input}`}
                 />
-                <span className="text-sm text-gray-500">times</span>
+                <span className={`text-sm ${theme.muted}`}>{tr("times")}</span>
               </div>
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <div
                   onClick={() => update({ infiniteRepeat: !playerState.infiniteRepeat })}
                   className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer ${
-                    playerState.infiniteRepeat ? "bg-emerald-500" : "bg-gray-200"
+                    playerState.infiniteRepeat ? theme.toggleOn : theme.toggleOff
                   }`}
                 >
                   <div
@@ -253,25 +360,21 @@ export default function Home() {
                     }`}
                   />
                 </div>
-                <span className="text-sm text-gray-600">∞ Loop</span>
+                <span className={`text-sm ${theme.primary}`}>{tr("infiniteLoop")}</span>
               </label>
             </div>
           </div>
 
           {/* Speed */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Playback Speed
-            </label>
+            <label className={`block text-sm mb-2 ${theme.label}`}>{tr("playbackSpeed")}</label>
             <div className="flex gap-2 flex-wrap">
               {SPEED_OPTIONS.map((speed) => (
                 <button
                   key={speed}
                   onClick={() => update({ speed })}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-colors ${
-                    playerState.speed === speed
-                      ? "bg-emerald-500 text-white border-emerald-500"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-emerald-300"
+                  className={`px-3 py-1.5 text-sm font-medium border-2 transition-all ${
+                    playerState.speed === speed ? theme.chipActive : theme.chip
                   }`}
                 >
                   {speed}×
@@ -282,22 +385,23 @@ export default function Home() {
 
           {/* Pause after ayah */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Pause After Each Ayah{" "}
-              <span className="text-gray-400 font-normal">(time to repeat)</span>
+            <label className={`block text-sm mb-1 ${theme.label}`}>
+              {tr("pauseAfterAyah")}{" "}
+              <span className={`font-normal text-xs ${theme.muted}`}>({tr("pauseHint")})</span>
             </label>
-            <p className="text-xs text-gray-400 mb-2">
-              <span className="font-medium text-gray-500">Match</span> = same duration as the recitation
+            <p className={`text-xs mb-2 ${theme.muted}`}>
+              <span className={`font-semibold ${isChild ? "text-orange-500" : "text-yellow-500"}`}>
+                {tr("pauseMatch")}
+              </span>{" "}
+              — {tr("pauseMatchNote").split(" — ").slice(1).join(" — ")}
             </p>
             <div className="flex gap-2 flex-wrap">
               {PAUSE_OPTIONS.map(({ label, value }) => (
                 <button
                   key={value}
                   onClick={() => update({ pauseAfterAyah: value })}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-colors ${
-                    playerState.pauseAfterAyah === value
-                      ? "bg-teal-500 text-white border-teal-500"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-teal-300"
+                  className={`px-3 py-1.5 text-sm font-medium border-2 transition-all ${
+                    playerState.pauseAfterAyah === value ? theme.chipActive : theme.chip
                   }`}
                 >
                   {label}
@@ -306,33 +410,55 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Start button */}
+          {/* Start / Update button */}
           <button
-            onClick={handleStart}
-            className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] text-base"
+            onClick={() => setCommitted(true)}
+            className={`w-full py-4 font-bold transition-all active:scale-[0.98] text-base shadow-md hover:shadow-lg ${theme.btnPrimary}`}
           >
-            {committed ? "Update Player" : "Start Listening"}
+            {isChild && "▶ "}
+            {committed ? tr("updatePlayer") : tr("startListening")}
           </button>
+
+          {/* Child-mode motivation strip */}
+          {isChild && (
+            <div className="flex items-end justify-around pt-1">
+              <ChildBoy className="w-12 h-16 opacity-80" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }} />
+              <ChildGirl className="w-14 h-18 opacity-90" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }} />
+              <ChildBoy2 className="w-12 h-16 opacity-80" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }} />
+              <ChildGirl2 className="w-14 h-18 opacity-90" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.08))" }} />
+            </div>
+          )}
         </div>
 
-        {/* Audio Player — only shown after first Start */}
+        {/* ── Audio Player ─────────────────────────────────────────────── */}
         {committed && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <AudioPlayer playerState={playerState} />
           </div>
         )}
 
-        {/* Share */}
+        {/* ── Share ────────────────────────────────────────────────────── */}
         {committed && (
           <div className="animate-in fade-in duration-500">
             <ShareButton playerState={playerState} />
           </div>
         )}
 
-        {/* Footer */}
-        <footer className="text-center text-xs text-gray-400 pb-8 space-y-1">
-          <p>Audio from <a href="https://everyayah.com" target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:underline">EveryAyah.com</a> — free Quran audio</p>
-          <p>Quran data from open public sources</p>
+        {/* ── Footer ───────────────────────────────────────────────────── */}
+        <footer className={`text-center text-xs pb-8 space-y-1 ${theme.footer}`}>
+          <p>
+            {tr("audioFrom")}{" "}
+            <a
+              href="https://everyayah.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={theme.footerLink}
+            >
+              EveryAyah.com
+            </a>{" "}
+            {tr("freeAudio")}
+          </p>
+          <p>{tr("quranData")}</p>
         </footer>
       </div>
     </div>
