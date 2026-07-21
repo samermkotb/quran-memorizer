@@ -73,6 +73,9 @@ export default function ReciterSelector({ value, onChange }: Props) {
               <div className={`text-xs ${theme.muted}`} dir={lang === "en" ? "rtl" : undefined}>
                 {lang === "ar" ? selected.name : selected.arabicName}
               </div>
+              {selected.source === "mp3quran" && (
+                <div className={`text-xs mt-0.5 ${theme.muted}`}>{tr("fullSurahOnly")}</div>
+              )}
             </div>
           </div>
         ) : (
@@ -121,6 +124,9 @@ export default function ReciterSelector({ value, onChange }: Props) {
                       <div className={`text-xs ${theme.muted}`} dir={lang === "en" ? "rtl" : undefined}>
                         {lang === "ar" ? reciter.name : reciter.arabicName}
                       </div>
+                      {reciter.source === "mp3quran" && (
+                        <div className={`text-xs mt-0.5 ${theme.muted}`}>{tr("fullSurahOnly")}</div>
+                      )}
                     </div>
                   </button>
                 </li>

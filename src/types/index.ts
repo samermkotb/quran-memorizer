@@ -7,13 +7,22 @@ export interface Surah {
   revelationType: "Meccan" | "Medinan";
 }
 
+export type AudioSourceType = "everyayah" | "mp3quran";
+
 export interface Reciter {
   id: string;
   name: string;
   arabicName: string;
   style: "Murattal" | "Mujawwad" | "Muallim";
-  everyayahFolder: string;
   bitrate: string;
+  /** Where audio for this reciter is fetched from. */
+  source: AudioSourceType;
+  /** everyayah.com CDN folder — required when source is "everyayah". Enables ayah-by-ayah playback. */
+  everyayahFolder?: string;
+  /** mp3quran.net server base URL (trailing slash) — required when source is "mp3quran". Full-surah files only. */
+  mp3quranServer?: string;
+  /** Surah numbers this reciter's mp3quran mushaf does not include, if any. */
+  mp3quranMissingSurahs?: number[];
 }
 
 export interface PlayerState {

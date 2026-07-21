@@ -5,12 +5,14 @@ import { PlayerState } from "@/types";
 import { SURAHS, getSurah } from "@/lib/surahData";
 import { DEFAULT_RECITER_ID, getReciter } from "@/lib/reciters";
 import { decodeShareUrl } from "@/lib/shareUtils";
+import { getFullSurahAudioUrl, isSurahAvailableForReciter } from "@/lib/audioUtils";
 import { useApp } from "@/contexts/AppContext";
 import { ChildBoy, ChildGirl, ChildBoy2, ChildGirl2 } from "@/components/ChildIllustrations";
 import SurahSelector from "@/components/SurahSelector";
 import ReciterSelector from "@/components/ReciterSelector";
 import AudioPlayer from "@/components/AudioPlayer";
 import ShareButton from "@/components/ShareButton";
+import DownloadButton from "@/components/DownloadButton";
 
 const DEFAULT_STATE: PlayerState = {
   surahNumber: 1,
@@ -71,6 +73,7 @@ export default function Home() {
 
   const currentSurah = getSurah(playerState.surahNumber);
   const maxAyah = currentSurah?.numberOfAyahs ?? 1;
+  const reciter = getReciter(playerState.reciterId);
 
   const update = useCallback((patch: Partial<PlayerState>) => {
     setPlayerState((prev) => {
@@ -80,6 +83,15 @@ export default function Home() {
         const max = s?.numberOfAyahs ?? 1;
         next.startAyah = 1;
         next.endAyah = max;
+      }
+      // mp3quran reciters only have one full-surah file — ayah subranges aren't possible.
+      if (patch.reciterId !== undefined) {
+        const r = getReciter(patch.reciterId);
+        if (r?.source === "mp3quran") {
+          const max = getSurah(next.surahNumber)?.numberOfAyahs ?? 1;
+          next.startAyah = 1;
+          next.endAyah = max;
+        }
       }
       if (next.startAyah > next.endAyah) next.endAyah = next.startAyah;
       if (next.endAyah < next.startAyah) next.startAyah = next.endAyah;
@@ -240,11 +252,12 @@ export default function Home() {
                 min={1}
                 max={maxAyah}
                 value={playerState.startAyah}
+                disabled={reciter?.source === "mp3quran"}
                 onChange={(e) => {
                   const v = Math.max(1, Math.min(parseInt(e.target.value) || 1, maxAyah));
                   update({ startAyah: v });
                 }}
-                className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors ${theme.input}`}
+                className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme.input}`}
               />
             </div>
             <div>
@@ -254,6 +267,7 @@ export default function Home() {
                 min={playerState.startAyah}
                 max={maxAyah}
                 value={playerState.endAyah}
+                disabled={reciter?.source === "mp3quran"}
                 onChange={(e) => {
                   const v = Math.max(
                     playerState.startAyah,
@@ -261,10 +275,13 @@ export default function Home() {
                   );
                   update({ endAyah: v });
                 }}
-                className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors ${theme.input}`}
+                className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme.input}`}
               />
             </div>
           </div>
+          {reciter?.source === "mp3quran" && (
+            <p className={`text-xs ${theme.muted}`}>{tr("fullSurahOnlyNote")}</p>
+          )}
 
           {/* Surah info chips */}
           {currentSurah && (
@@ -431,15 +448,45 @@ export default function Home() {
         </div>
 
         {/* ── Audio Player ─────────────────────────────────────────────── */}
-        {committed && (
+        {committed && reciter?.source === "everyayah" && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <AudioPlayer playerState={playerState} />
           </div>
         )}
 
-        {/* ── Share ────────────────────────────────────────────────────── */}
-        {committed && (
-          <div className="animate-in fade-in duration-500">
+        {/* ── Full-surah-only player (mp3quran reciters) ──────────────────── */}
+        {committed && reciter?.source === "mp3quran" && (
+          <div className={`${theme.playerCard} p-6 space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+            <div>
+              <div className={`text-xs font-medium uppercase tracking-wider mb-1 ${theme.phSecondary}`}>
+                {tr("nowPlaying")}
+              </div>
+              <div className={`font-bold text-xl leading-tight ${theme.phPrimary}`}>
+                {currentSurah ? currentSurah.englishName : "—"}
+              </div>
+            </div>
+            <p className={`text-xs ${theme.muted}`}>{tr("fullSurahOnlyNote")}</p>
+            {isSurahAvailableForReciter(reciter, playerState.surahNumber) ? (
+              <audio
+                controls
+                className="w-full"
+                src={getFullSurahAudioUrl(reciter, playerState.surahNumber) ?? undefined}
+              />
+            ) : (
+              <div className={`px-3 py-2 text-sm ${theme.errBox}`}>{tr("downloadUnavailableSurah")}</div>
+            )}
+          </div>
+        )}
+
+        {/* ── Download & Share ────────────────────────────────────────────── */}
+        {committed && reciter && (
+          <div className="animate-in fade-in duration-500 space-y-3">
+            <DownloadButton
+              playerState={playerState}
+              reciter={reciter}
+              surahEnglishName={currentSurah?.englishName ?? "Surah"}
+              numberOfAyahs={maxAyah}
+            />
             <ShareButton playerState={playerState} />
           </div>
         )}
@@ -455,6 +502,15 @@ export default function Home() {
               className={theme.footerLink}
             >
               EveryAyah.com
+            </a>{" "}
+            {tr("and")}{" "}
+            <a
+              href="https://mp3quran.net"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={theme.footerLink}
+            >
+              mp3quran.net
             </a>{" "}
             {tr("freeAudio")}
           </p>
