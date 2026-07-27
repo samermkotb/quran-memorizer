@@ -1,11 +1,15 @@
 # فاستمعوا له — Design Portfolio & Figma-Ready Specification
 
-> **Visual direction source**: this specification and the implemented UI are derived
-> from a Claude Design reference ("Quranic app interface redesign" — Claude Design
-> project `1eea0b85-7629-43ba-b6f4-b5634e40dede`), cross-checked against an
-> independently exported copy of the same design package. It is **not** a Figma file —
-> it is the specification a designer needs to rebuild the system in Figma accurately,
-> plus documentation of how it was implemented in this codebase.
+> **Visual direction source (v2 — current)**: the implemented UI's colors, typography,
+> and component styling are taken exactly from `quran-app-design-system-v2.html`, a
+> local Claude-generated design system artifact — a warm, Mushaf-inspired palette
+> (taupe/mocha header, parchment canvas, per-item accent covers in navy/teal/plum/slate,
+> and aged gold as the single CTA/selection color). This **supersedes** an earlier
+> ink/forest/gold "dark mode" direction explored in a prior iteration of this app; every
+> hex value below comes directly from that v2 file, not from the earlier direction.
+> This document is **not** a Figma file — it is the specification a designer needs to
+> rebuild the system in Figma accurately, plus documentation of how it was implemented
+> in this codebase.
 
 ## 1. Product overview
 
@@ -40,23 +44,28 @@ simplified, illustrated **Child** mode, sharing one visual language.
 
 ## 2. Design principles
 
-Derived from the design reference's stated direction ("more holy, simple, and
-motivating") and applied throughout:
+Derived from the v2 reference's own stated direction ("not near-black-and-gold" —
+a warm printed-Mushaf palette, not a generic dark app theme) and applied throughout:
 
 1. **Arabic-first, fully bilingual** — Arabic reads right-to-left as the primary
    experience; English is a complete, first-class alternative, not an afterthought.
 2. **Calm over busy** — one primary action per screen state, progressive disclosure
    (advanced settings — repeat/pause/speed — sit below the essentials, not competing
-   with them), muted secondary text, a single accent color (gold) reserved for the
-   thing that matters most right now.
-3. **Quran text gets its own voice** — Amiri Quran (serif, Quranic calligraphic
-   register) is reserved for Quranic/Arabic-name display text; Cairo (a clean, modern
-   Arabic+Latin sans) handles all UI chrome, so the two never compete.
-4. **Gentle, non-literal geometry** — a very low-opacity gold lattice/star motif in the
-   background, never a busy or literal illustration competing with content.
-5. **Same brand, two moods** — Adult and Child modes share one palette family and one
-   set of components; Child mode differs by being lighter, warmer, larger-touch-target,
-   and illustrated — not a different app.
+   with them), muted mocha secondary text, a single accent color (aged gold) reserved
+   for the thing that matters most right now.
+3. **Three fonts, three jobs** — Noto Naskh Arabic (calligraphic) is reserved for the
+   brand wordmark and reciter-avatar initials only; Amiri Quran (recitation-grade
+   script) is reserved for actual Quranic/proper-noun Arabic text (surah and reciter
+   names); Cairo (clean geometric sans) handles everything else. The three never mix
+   within one element.
+4. **Accent per item, not one flat theme** — the reference's signature pattern (each
+   Mushaf edition gets its own cover-inspired accent — navy, teal, plum, slate) is
+   applied to reciter cards: cards rotate through the same four accents instead of one
+   flat color, so each reciter reads as a distinct "edition."
+5. **Same brand, two moods** — Adult and Child modes share the identical parchment/
+   mocha/gold palette and every component; the only difference is the "primary hue"
+   (navy for Adult, teal for Child — two of the same four reference accents), plus
+   Child mode's larger touch targets and illustrations — not a different app.
 6. **Accessible by default** — 44px minimum touch targets, visible focus rings, real
    keyboard navigation, RTL-correct logical spacing (start/end, not left/right), reduced
    motion support.
@@ -64,68 +73,70 @@ motivating") and applied throughout:
    single initial, it instead shows the first whole word ("Mishary", "مشاري"), because a
    letter doesn't identify a person and a word does.
 
-## 3. Color palette (exact values)
+## 3. Color palette (exact values from quran-app-design-system-v2.html)
 
 | Token | Hex | Usage |
 |---|---|---|
-| `ink-950` | `#101512` | Adult mode page background |
-| `ink-900` | `#171E1B` | Adult mode surface / cards |
-| `ink-800` | `#1D2723` | Adult mode raised surface (inputs, active segment) |
-| `ink-700` | `#25322D` | Adult mode borders/track backgrounds |
-| `forest-700` | `#24483E` | Support green — logo mark, glows, dark-mode accents |
-| `forest-500` | `#397365` | Support green — light-mode accent text |
-| `gold-500` | `#C9A55A` | **Primary accent** — primary buttons, selected states, links |
-| `gold-300` | `#EAD29B` | Accent text on dark surfaces (labels, active segment text) |
-| `sand-100` | `#F5EFE3` | Adult-mode primary text; Child-mode page background |
-| `sand-200` | `#E8DCC4` | Child-mode secondary surfaces/borders |
-| `teal-500` | `#58A69A` | "Live/active" state — now-playing dot, secondary progress fill |
-| `red-500` | `#D66B64` | Danger/error |
-| `#AAA99F` | — | Dark-mode muted/secondary text |
-| `#68736D` | — | Light-mode muted/secondary text |
-| `#FBF7EF` | — | Child-mode card surface |
+| `mocha-900` | `#3B2E29` | App bar / header background (both modes) |
+| `mocha-700` | `#5B4A42` | (primitive; reserved) |
+| `mocha-500` | `#8A7368` | Muted/secondary text, borders' text pairing |
+| `mocha-300` | `#B9A99C` | Default borders, inactive toggle track |
+| `parchment-50` | `#F4EAD3` | Page canvas background; text-on-dark (app bar, cards) |
+| `parchment-100` | `#ECE1C6` | Card / surface background |
+| `parchment-300` | `#D8CBA6` | Hover background for list rows / chips |
+| `ink-900` | `#241C16` | Primary text; text-on-gold |
+| `navy-700` | `#1F3350` | **Adult mode's primary hue** — CTA button, mode-active pill, logo glow, reciter-card accent #1 |
+| `navy-900` | `#16223B` | (gradient end reference; app uses `ink-900` as the actual gradient stop) |
+| `teal-700` | `#1E4B44` | **Child mode's primary hue** — same roles as navy-700 in Child mode; reciter-card accent #2 |
+| `teal-900` | `#16342F` | (primitive; reserved) |
+| `plum-700` | `#4A3A55` | Reciter-card accent #3 |
+| `plum-900` | `#372A40` | (primitive; reserved) |
+| `slate-700` | `#2F4759` | Reciter-card accent #4 |
+| `slate-900` | `#233544` | (primitive; reserved) |
+| `gold-600` | `#B98F35` | **Universal CTA/selection color** — chip-active, transport play, focus rings, selected-card outline, gold badge |
+| `gold-400` | `#D9B563` | Tagline text on the dark app bar |
+| `gold-300` | `#E9CD8B` | Pause-banner tint |
+| `success-700` | `#1E6B45` | Now-Playing gradient start (live/playing state, not identity) |
+| `success-500` | `#2E9B63` | Now-Playing live dot; "Murattal" style tag; done-ayah dot |
+| `purple-600` | `#7A4FB0` | "Mujawwad" style tag |
+| `page-border` / `page-bg` | `#16889A` / `#EFF6F0` | Reserved for a future literal Quran-reading page surface (not yet used in the app UI) |
 
-Semantic mapping used in this app: **Adult = dark set** (ink background, gold accent,
-forest support), **Child = light set** (sand background, forest-green text, gold
-accent) — i.e., the design system's "dark" and "light" modes map onto this app's
-existing Adult/Child modes rather than being a separate, third toggle. See
-`src/lib/themes.ts`.
+Semantic mapping used in this app: **canvas, card, ink, muted, gold, borders, success,
+and purple are identical between Adult and Child** — the only difference is the
+"primary hue" used for the main CTA button, mode-active pill, and logo glow: **navy for
+Adult, teal for Child** (two of the same four reciter-card accents). See
+`src/lib/themes.ts` (`adultTheme` / `childTheme`).
 
 ## 4. Typography
 
-| Style | Font | Weight | Notes |
+| Role | Font | Weight | Used for |
 |---|---|---:|---|
-| UI text | **Cairo** | 400 / 500 / 600 / 700 / 800 | All chrome: labels, buttons, body copy, numerals |
-| Quranic/display Arabic | **Amiri Quran** (fallback: Scheherazade New, serif) | 400 | Surah Arabic names, brand mark glyph, Now-Playing hero |
+| Wordmark | **Noto Naskh Arabic** | 700 | Brand name "فاستمعوا له", app-bar/hero logo glyph, reciter-avatar initials |
+| Ayah / proper names | **Amiri Quran** (fallback: Scheherazade New, serif) | 400 | Surah Arabic names, reciter Arabic names — anywhere real Arabic proper-noun text appears |
+| UI | **Cairo** | 400 / 500 / 600 / 700 / 800 | Everything else: labels, buttons, body copy, numerals |
 
-Loaded via `next/font/google` in `src/app/layout.tsx` (`Cairo`, `Amiri_Quran`), exposed
-as CSS variables `--font-ui` / `--font-quran` and Tailwind utilities `font-ui` /
-`font-quran` (registered in `src/app/globals.css`'s `@theme` block).
+Loaded via `next/font/google` in `src/app/layout.tsx` (`Cairo`, `Amiri_Quran`,
+`Noto_Naskh_Arabic`), exposed as CSS variables `--font-ui` / `--font-quran` /
+`--font-wordmark` and Tailwind utilities `font-ui` / `font-quran` / `font-wordmark`
+(registered in `src/app/globals.css`'s `@theme` block).
 
-Scale (reference `figma-spec.md`, used as guidance — implemented with the app's
-existing `text-xs`…`text-4xl` Tailwind scale rather than a bespoke one):
+Note: production Quran verse text should ultimately use the true Uthmanic Hafs
+Madinah-mushaf typeface — the reference itself flags that this isn't distributed on
+Google Fonts and needs self-hosting under its own license. Amiri Quran remains the
+closest freely-licensed substitute until that's sourced.
 
-| Style | Size / line |
-|---|---:|
-| Display/Hero | 64/76 (48/58 mobile) |
-| Heading/H1 | 48/58 |
-| Heading/H2 | 32/42 |
-| Heading/H3 | 20/30 |
-| Body/Default | 16/27 |
-| Label/Default | 14/22 |
-| Meta/Small | 12/18 |
-| Quran/Display | 36/72 |
-| Quran/Inline | 22/44 |
+## 5. Spacing, radius, shadows, breakpoints
 
-## 5. Spacing, radius, breakpoints
-
-- **Space scale**: 4, 8, 12, 16, 24, 32, 48, 64px
-- **Radius scale**: sm 8px, md 12px, lg 20px, xl 28px, full (pill) — implemented with
-  Tailwind's `rounded-lg`/`rounded-xl`/`rounded-2xl`/`rounded-3xl`/`rounded-full`
-- **Shadow**: `0 24px 70px rgba(0,0,0,.35)` dark, `0 24px 70px rgba(47,42,31,.13)` light
-  — Tailwind utility `shadow-raised` (registered in `@theme`)
-- **Breakpoints**: 600px (mobile → tablet), 900px (tablet → desktop), 1240px (content
-  max width) — implemented with Tailwind's default `sm`/`md`/`lg` breakpoints, close
-  enough in practice that no custom breakpoint config was introduced
+- **Space scale**: 8, 12, 16, 24px (reference's `--sp-sm/md/lg/xl`)
+- **Radius scale**: sm 8px, md 12px, lg 18px, xl 24px, full (pill) — implemented as
+  Tailwind arbitrary values (`rounded-[12px]`, `rounded-[18px]`) since the exact px
+  values don't line up with Tailwind's default named scale
+- **Shadows**: `shadow-card` = `0 14px 34px -14px rgba(59,46,41,.35), 0 2px 6px
+  rgba(59,46,41,.18)` (cards, panels); `shadow-lift` = `0 20px 40px -16px
+  rgba(59,46,41,.45)` (the floating transport play button) — both registered as
+  Tailwind utilities in `@theme`
+- **Breakpoints**: Tailwind's default `sm` (640px) is used for the mobile-sheet ⇄
+  desktop-modal switch in `SurahSelector`
 - **Minimum touch target**: 44×44px on every interactive control
 
 ## 6. Component inventory
@@ -178,7 +189,15 @@ Replaces the previous dropdown as the **primary** reciter-selection UI.
   the reciter's only source is `mp3quran` (i.e. ayah-range playback isn't available for
   them). All 25 currently-supported reciters and their source restrictions are
   preserved unchanged (`src/lib/reciters.ts` was not modified).
-- **Selected state**: gold ring/border + filled gold checkmark badge + `aria-selected`.
+- **Accent rotation**: each card's background cycles through the same four
+  navy/teal/plum/slate → ink-900 diagonal gradients used for the reference's mushaf
+  library, by index (`RECITER_ACCENTS` in `src/lib/themes.ts`) — so adjacent reciters
+  are visually distinct "editions," exactly the reference's signature pattern, not a
+  single flat card color.
+- **Selected state**: gold outline (`outline-2 outline-gold-600`) + a white circle with
+  a navy (Adult) / teal (Child) checkmark icon, fading in — matching the reference's
+  `.sheikh-card--sel` / `.sheikh-card__check` exactly (the check icon always uses the
+  theme's primary hue, regardless of which of the four accents the card itself has).
 - **Interaction**:
   - Touch: native scroll-snap swipe.
   - Pointer: click/tap any card to select it.
@@ -190,11 +209,12 @@ Replaces the previous dropdown as the **primary** reciter-selection UI.
     in place by Arabic or English/transliterated name — the cards remain the primary
     selector; search narrows them, it never replaces them with a plain list.
 - **Avatar / first-word rule**: no reciter photos are scraped, hotlinked, or fabricated.
-  Each avatar is a locally rendered rounded badge showing the reciter's **first name
-  word** in the active locale (e.g. "Mishary" in English, "مشاري" in Arabic), in the UI
-  font, on a gold/forest gradient — never a single-letter initial. This is implemented
-  once via a small `firstWord()` helper in `ReciterSelector.tsx` so the rule is trivial
-  to reuse anywhere else a compact reciter label is needed.
+  Each avatar is a translucent white circle (`bg-white/15`, matching the reference's
+  `.sheikh-card__avatar`) showing the reciter's **first name word** in the active locale
+  (e.g. "Mishary" in English, "مشاري" in Arabic) in the wordmark font — never a
+  single-letter initial. This is implemented once via a small `firstWord()` helper in
+  `ReciterSelector.tsx` so the rule is trivial to reuse anywhere else a compact reciter
+  label is needed.
 - **Data not fabricated**: the design reference's mockup shows a reciter's home country
   as card metadata; this app's data model doesn't carry verified per-reciter location
   data, so it isn't shown, to avoid misattributing nationality. Only verified fields
@@ -202,20 +222,20 @@ Replaces the previous dropdown as the **primary** reciter-selection UI.
 
 ## 9. Adult theme
 
-Dark, reverent, uncluttered: ink background, gold primary accent, forest-green support,
-teal for "live/active" states (the now-playing dot, secondary progress fills), a very
-low-opacity gold geometric lattice in the page background. Defined in
-`src/lib/themes.ts` → `adultTheme`.
+Warm parchment canvas, mocha app bar, ink text, aged-gold CTAs/selection — with
+**navy-700** as the primary hue (main "Start Listening"/"Update Player" button,
+mode-active pill, logo glow). Defined in `src/lib/themes.ts` → `adultTheme`.
 
 ## 10. Child theme
 
-Light and warm — sand background, forest-green text, the same gold accent as Adult mode
-(same brand, not a disconnected palette), larger radii (`rounded-3xl` throughout),
-bigger touch targets, and the existing hand-drawn `ChildIllustrations` characters
-(reading Quran, cross-legged, from behind) kept exactly as they were — no illustration
-work was needed or changed. A gold/teal segmented-control distinction (gold for mode,
-teal for language) preserves a bit of the original playful variety within the new
-palette. Defined in `src/lib/themes.ts` → `childTheme`.
+Byte-identical palette to Adult mode (same parchment canvas, card, ink text, gold
+accent, borders) — the only difference is **teal-700** as the primary hue instead of
+navy-700, plus larger reciter-card radii (`rounded-3xl` vs `rounded-2xl`, driven by
+`theme.isChild` in `ReciterSelector.tsx`) and the existing hand-drawn
+`ChildIllustrations` characters (reading Quran, cross-legged, from behind) kept exactly
+as they were — no illustration work was needed or changed. Defined in
+`src/lib/themes.ts` → `childTheme` (spreads `adultTheme` and overrides only the
+hue-dependent fields).
 
 ## 11. Accessibility
 
@@ -231,9 +251,10 @@ palette. Defined in `src/lib/themes.ts` → `childTheme`.
   matters.
 - `prefers-reduced-motion: reduce` disables/shortens all animations and smooth-scroll
   globally (`globals.css`).
-- Dark and light (Adult/Child) palettes were chosen from the design system's own
-  WCAG-AA-oriented semantic tokens (gold-on-ink and forest-on-sand both meet AA for
-  normal text at the sizes used).
+- Body text uses ink-900 on parchment-50/100 (high contrast); the app bar's white/gold
+  text sits on mocha-900 (also high contrast); gold-600 is only ever used for large/bold
+  text, icons, and fills — not small body copy — since gold-on-parchment contrast is
+  moderate rather than AAA-level.
 
 ## 12. Feature-to-component mapping (current app capabilities)
 

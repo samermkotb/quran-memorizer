@@ -1,35 +1,52 @@
 @import "tailwindcss";
 
-/* ── فاستمعوا له design tokens ───────────────────────────────────────────── */
-/* Derived from the "فاستمعوا له" Claude Design reference (design-tokens.json). */
+/* ── فاستمعوا له design tokens (v2) ──────────────────────────────────────── */
+/* Exact values from quran-app-design-system-v2.html — the authoritative
+   Mushaf-inspired reference: taupe/mocha header, parchment canvas, per-item
+   accent covers (navy/teal/plum/slate), and aged gold as the single CTA/
+   selection color. */
 @theme {
-  --color-ink-950: #101512;
-  --color-ink-900: #171e1b;
-  --color-ink-800: #1d2723;
-  --color-ink-700: #25322d;
+  --color-mocha-900: #3b2e29;
+  --color-mocha-700: #5b4a42;
+  --color-mocha-500: #8a7368;
+  --color-mocha-300: #b9a99c;
 
-  --color-forest-700: #24483e;
-  --color-forest-500: #397365;
+  --color-parchment-50: #f4ead3;
+  --color-parchment-100: #ece1c6;
+  --color-parchment-300: #d8cba6;
 
-  --color-gold-500: #c9a55a;
-  --color-gold-300: #ead29b;
+  --color-ink-900: #241c16;
 
-  --color-sand-100: #f5efe3;
-  --color-sand-200: #e8dcc4;
+  --color-navy-700: #1f3350;
+  --color-navy-900: #16223b;
 
-  --color-teal-500: #58a69a;
-  --color-red-500: #d66b64;
+  --color-teal-700: #1e4b44;
+  --color-teal-900: #16342f;
+
+  --color-plum-700: #4a3a55;
+  --color-plum-900: #372a40;
+
+  --color-slate-700: #2f4759;
+  --color-slate-900: #233544;
+
+  --color-gold-600: #b98f35;
+  --color-gold-400: #d9b563;
+  --color-gold-300: #e9cd8b;
+
+  --color-page-border: #16889a;
+  --color-page-bg: #eff6f0;
+
+  --color-success-700: #1e6b45;
+  --color-success-500: #2e9b63;
+
+  --color-purple-600: #7a4fb0;
 
   --font-ui: "Cairo", system-ui, sans-serif;
   --font-quran: "Amiri Quran", "Scheherazade New", serif;
+  --font-wordmark: "Noto Naskh Arabic", serif;
 
-  --shadow-raised: 0 24px 70px rgba(0, 0, 0, 0.35);
-  --shadow-raised-light: 0 24px 70px rgba(47, 42, 31, 0.13);
-}
-
-/* Gentle geometric lattice motif — subtle, gold-tinted, not literal Islamic art */
-.islamic-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23C9A55A' stroke-width='0.6' opacity='0.05'%3E%3Ccircle cx='42' cy='42' r='30'/%3E%3Cpath d='M42 12l7 21h21l-17 13 6 21-17-13-17 13 6-21-17-13h21z'/%3E%3C/g%3E%3C/svg%3E");
+  --shadow-card: 0 14px 34px -14px rgba(59, 46, 41, 0.35), 0 2px 6px rgba(59, 46, 41, 0.18);
+  --shadow-lift: 0 20px 40px -16px rgba(59, 46, 41, 0.45);
 }
 
 @layer utilities {

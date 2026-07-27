@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo, Amiri_Quran } from "next/font/google";
+import { Cairo, Amiri_Quran, Noto_Naskh_Arabic } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
@@ -14,6 +14,13 @@ const amiriQuran = Amiri_Quran({
   subsets: ["arabic"],
   weight: "400",
   variable: "--font-quran",
+  display: "swap",
+});
+
+const notoNaskhArabic = Noto_Naskh_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "700"],
+  variable: "--font-wordmark",
   display: "swap",
 });
 
@@ -35,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#171e1b",
+  themeColor: "#3b2e29",
 };
 
 export default function RootLayout({
@@ -45,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${cairo.variable} ${amiriQuran.variable} font-ui antialiased`}>
+      <body className={`${cairo.variable} ${amiriQuran.variable} ${notoNaskhArabic.variable} font-ui antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

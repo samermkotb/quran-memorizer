@@ -106,18 +106,16 @@ export default function Home() {
 
   return (
     <div className={`${theme.pageBg} min-h-screen`}>
-      {theme.pagePattern && <div className="fixed inset-0 islamic-pattern pointer-events-none" />}
-
       {/* ── App bar ─────────────────────────────────────────────────── */}
       <div className={`sticky top-0 z-50 ${theme.topBar}`}>
         <div className="max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
           {/* Brand */}
           <div className="flex items-center gap-2.5 min-w-0">
             <div className={`w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0 ${theme.logoBg}`}>
-              <span className={`font-quran text-base ${theme.logoChar}`}>ف</span>
+              <span className={`font-wordmark text-base ${theme.logoChar}`}>ف</span>
             </div>
             <div className="min-w-0 leading-tight">
-              <div className={`font-bold text-sm truncate ${theme.titleColor}`}>{tr("appName")}</div>
+              <div className={`font-wordmark font-bold text-sm truncate ${theme.titleColor}`}>{tr("appName")}</div>
               <div className={`text-[11px] truncate ${theme.subtitleColor}`}>{tr("tagline")}</div>
             </div>
           </div>
@@ -147,7 +145,7 @@ export default function Home() {
           <header className="text-center pt-2 pb-2">
             <div className="sm:hidden">
               <div className="flex justify-center gap-0.5 text-lg select-none mb-1">⭐⭐⭐</div>
-              <p className={`text-sm font-bold ${theme.subtitleColor}`}>{tr("childGreeting")}</p>
+              <p className={`text-sm font-bold ${theme.accent}`}>{tr("childGreeting")}</p>
               <div className="flex items-end justify-center gap-1 mt-3 mb-1">
                 <ChildGirl2 className="w-16 h-20 drop-shadow-md" />
                 <ChildBoy className="w-14 h-18 drop-shadow-md" />
@@ -169,7 +167,7 @@ export default function Home() {
               </div>
               <div className="text-center px-1 pb-2">
                 <div className="flex justify-center gap-0.5 text-lg select-none mb-1">⭐⭐⭐</div>
-                <p className={`text-sm font-bold ${theme.subtitleColor}`}>{tr("childGreeting")}</p>
+                <p className={`text-sm font-bold ${theme.accent}`}>{tr("childGreeting")}</p>
               </div>
               <div className="flex items-end gap-1 mb-2">
                 <ChildGirl
@@ -228,7 +226,7 @@ export default function Home() {
               <span className={`text-xs px-3 py-1 rounded-full ${theme.chip2}`}>
                 {currentSurah.revelationType === "Meccan" ? tr("meccan") : tr("medinan")}
               </span>
-              <span className={`text-xs px-3 py-1 rounded-full ${theme.chip3}`} dir="rtl">
+              <span className={`text-xs px-3 py-1 rounded-full font-quran ${theme.chip3}`} dir="rtl">
                 {currentSurah.name}
               </span>
               {lang === "en" && (
@@ -365,7 +363,7 @@ export default function Home() {
               <span className={`font-normal text-xs ${theme.muted}`}>({tr("pauseHint")})</span>
             </label>
             <p className={`text-xs mb-2 ${theme.muted}`}>
-              <span className="font-semibold text-gold-500">
+              <span className={`font-semibold ${theme.accent}`}>
                 {tr("pauseMatch")}
               </span>{" "}
               — {tr("pauseMatchNote").split(" — ").slice(1).join(" — ")}

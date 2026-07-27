@@ -481,7 +481,7 @@ export default function AudioPlayer({ playerState }: Props) {
           ))}
         </div>
 
-        <div className={`mx-auto mt-4 w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] flex items-center justify-center rounded-2xl font-quran text-xl ${theme.reciterAvatarActive}`}>
+        <div className={`mx-auto mt-4 w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] flex items-center justify-center rounded-2xl font-wordmark text-xl ${theme.reciterAvatar}`}>
           {surah?.number ?? "—"}
         </div>
 
@@ -603,20 +603,20 @@ export default function AudioPlayer({ playerState }: Props) {
           {/* Main button */}
           {status.isPausing ? (
             <button onClick={skipPause} title={tr("skip")}
-              className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation ${theme.btnPrimary}`}>
+              className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation ${theme.transportPlay}`}>
               <svg className="w-9 h-9" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
               </svg>
             </button>
           ) : !status.isPlaying && !status.isLoading ? (
             <button onClick={play} title={tr("play")}
-              className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation ${theme.btnPrimary}`}>
+              className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation ${theme.transportPlay}`}>
               <svg className="w-9 h-9 ms-1" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </button>
           ) : status.isLoading ? (
-            <div className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg ${theme.btnPrimary}`}>
+            <div className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg ${theme.transportPlay}`}>
               <svg className="w-9 h-9 animate-spin opacity-80" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
@@ -624,7 +624,7 @@ export default function AudioPlayer({ playerState }: Props) {
             </div>
           ) : (
             <button onClick={pause} title={tr("pause")}
-              className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation ${theme.btnPrimary}`}>
+              className={`w-20 h-20 flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all active:scale-95 touch-manipulation ${theme.transportPlay}`}>
               <svg className="w-9 h-9" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
               </svg>

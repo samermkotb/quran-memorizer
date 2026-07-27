@@ -4,8 +4,8 @@
   "description": "Listen and repeat Quran ayahs for memorization",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#101512",
-  "theme_color": "#171e1b",
+  "background_color": "#F4EAD3",
+  "theme_color": "#3B2E29",
   "orientation": "portrait-primary",
   "icons": [
     {

@@ -3,7 +3,6 @@ export type Mode = "adult" | "child";
 export interface Theme {
   // Page
   pageBg: string;
-  pagePattern: boolean;
   // Cards
   card: string;
   playerCard: string;
@@ -16,6 +15,7 @@ export interface Theme {
   btnPrimary: string;
   btnSecondary: string;
   btnStop: string;
+  transportPlay: string;
   // Chips (speed / pause toggles)
   chip: string;
   chipActive: string;
@@ -69,154 +69,112 @@ export interface Theme {
   dropItemActive: string;
   dropSearch: string;
   dropNum: string;
+  dropNumActive: string;
   dropTrigger: string;
   // Reciter style badge colors
   reciterStyle: Record<string, string>;
   // Reciter carousel card
-  reciterCard: string;
-  reciterCardActive: string;
   reciterAvatar: string;
-  reciterAvatarActive: string;
+  reciterCardActive: string;
+  reciterCheck: string;
   // Misc
   isChild: boolean;
   roundCard: string;
 }
 
-// ── Adult theme: "فاستمعوا له" dark mode — ink, forest green, aged gold ──────
-// Palette + tokens sourced from the فاستمعوا له design system (design-tokens.json).
+// Rotating per-card accent covers — the reference's signature "accent per
+// mushaf edition / reciter" pattern (navy → teal → plum → slate → ink),
+// identical regardless of adult/child mode since it identifies the
+// reciter, not the app's own theme.
+export const RECITER_ACCENTS = [
+  "bg-[linear-gradient(155deg,#1F3350,#241C16_150%)]",
+  "bg-[linear-gradient(155deg,#1E4B44,#241C16_150%)]",
+  "bg-[linear-gradient(155deg,#4A3A55,#241C16_150%)]",
+  "bg-[linear-gradient(155deg,#2F4759,#241C16_150%)]",
+];
+
+// ── فاستمعوا له v2 — exact palette from quran-app-design-system-v2.html ────
+// Mocha/taupe header, parchment canvas, ink text, aged gold as the single
+// CTA/selection color. Adult and Child share every token except the
+// "primary hue" (navy for Adult, teal for Child) — the same kind of
+// accent-per-item differentiation the reference itself uses for mushaf
+// editions and reciters, applied here to the two modes.
 export const adultTheme: Theme = {
-  pageBg: "bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950",
-  pagePattern: true,
-  card: "bg-ink-900 border border-gold-500/15 shadow-raised rounded-2xl",
-  playerCard: "bg-ink-900 border border-gold-500/15 shadow-raised rounded-2xl overflow-hidden",
-  label: "text-[#AAA99F] font-semibold",
-  muted: "text-[#AAA99F]",
-  primary: "text-sand-100",
-  accent: "text-gold-500",
-  btnPrimary: "bg-gold-500 hover:bg-gold-300 active:bg-gold-500 text-[#18130b] font-bold shadow-lg shadow-black/30",
-  btnSecondary: "bg-ink-700 border border-gold-500/20 text-sand-100 hover:bg-ink-800",
-  btnStop: "text-[#AAA99F] hover:text-red-500 hover:bg-red-500/10",
-  chip: "bg-transparent text-[#AAA99F] border border-sand-200/15 hover:border-gold-500/50",
-  chipActive: "bg-gold-500 text-[#17130c] border-gold-500 font-semibold",
-  input: "bg-ink-800 border border-sand-200/15 text-sand-100 focus:border-gold-500 placeholder:text-[#6b756f] rounded-xl",
-  toggleOn: "bg-gold-500",
-  toggleOff: "bg-ink-700",
-  pbBg: "bg-ink-700",
-  pbFill: "bg-gold-500",
-  pb2Fill: "bg-teal-500",
-  playerHeader: "bg-[radial-gradient(circle_at_50%_35%,rgba(36,72,62,0.45),transparent_45%)]",
-  phPrimary: "text-sand-100",
-  phSecondary: "text-[#AAA99F]",
-  phDot: "bg-teal-500",
-  pauseBanner: "bg-forest-700/20 border border-gold-500/20 rounded-2xl",
-  pauseText: "text-gold-300 font-semibold",
-  pauseSub: "text-teal-500",
-  pauseIconBg: "bg-forest-700/40 text-teal-500",
-  pauseBtn: "bg-gold-500/15 text-gold-300 hover:bg-gold-500/25 rounded-lg",
-  dot: "bg-gold-500 ring-2 ring-gold-500/30",
-  dotDone: "bg-teal-500",
-  dotPending: "bg-ink-700",
-  chip1: "bg-forest-700/20 text-teal-500 border border-forest-500/30",
-  chip2: "bg-gold-500/10 text-gold-300 border border-gold-500/25",
-  chip3: "bg-ink-800 text-[#AAA99F] border border-sand-200/10",
-  logoBg: "bg-gradient-to-br from-forest-700 to-ink-900",
-  logoChar: "text-gold-300",
-  titleColor: "text-sand-100",
-  subtitleColor: "text-gold-500",
-  topBar: "bg-ink-950/90 border-b border-sand-200/10 backdrop-blur-xl",
-  modeActive: "bg-ink-700 text-gold-300 font-semibold rounded-lg shadow-sm",
-  modeInactive: "text-[#AAA99F] hover:bg-ink-800 rounded-lg",
-  langActive: "bg-ink-700 text-gold-300 font-semibold rounded-lg shadow-sm",
-  langInactive: "text-[#AAA99F] hover:bg-ink-800 rounded-lg",
-  errBox: "bg-red-500/10 border border-red-500/40 text-[#f2a8a3] rounded-lg",
-  footer: "text-[#6b756f]",
-  footerLink: "text-gold-500 hover:text-gold-300",
-  dropdown: "bg-ink-900 border border-gold-500/20 shadow-raised rounded-xl",
-  dropItem: "hover:bg-ink-800 text-sand-100",
-  dropItemActive: "bg-ink-800",
-  dropSearch: "bg-ink-800 border border-sand-200/15 text-sand-100 placeholder:text-[#6b756f] focus:border-gold-500 rounded-lg",
-  dropNum: "bg-gold-500/15 text-gold-300",
-  dropTrigger: "bg-ink-900 border border-sand-200/15 hover:border-gold-500/40 focus:border-gold-500 rounded-xl",
+  pageBg: "bg-parchment-50",
+  card: "bg-parchment-100 border border-mocha-300 shadow-card rounded-[18px]",
+  playerCard: "bg-parchment-100 border border-mocha-300 shadow-card rounded-[18px] overflow-hidden",
+  label: "text-mocha-500 font-semibold",
+  muted: "text-mocha-500",
+  primary: "text-ink-900",
+  accent: "text-gold-600",
+  btnPrimary: "bg-navy-700 hover:brightness-110 text-parchment-50 font-bold shadow-card",
+  btnSecondary: "bg-transparent border-[1.5px] border-gold-600 text-mocha-900 hover:bg-gold-600/10",
+  btnStop: "text-mocha-500 hover:text-red-600 hover:bg-red-600/10",
+  transportPlay: "bg-gold-600 text-ink-900 shadow-lift",
+  chip: "bg-parchment-100 text-ink-900 border border-mocha-300 hover:border-navy-700",
+  chipActive: "bg-gold-600 text-ink-900 border-transparent font-semibold",
+  input: "bg-parchment-100 border border-mocha-300 text-ink-900 focus:border-gold-600 placeholder:text-mocha-500 rounded-[12px]",
+  toggleOn: "bg-gold-600",
+  toggleOff: "bg-mocha-300",
+  pbBg: "bg-mocha-300",
+  pbFill: "bg-gold-600",
+  pb2Fill: "bg-teal-700",
+  playerHeader: "bg-[linear-gradient(155deg,#1E6B45,#241C16_165%)]",
+  phPrimary: "text-white",
+  phSecondary: "text-white/75",
+  phDot: "bg-success-500",
+  pauseBanner: "bg-gold-300/25 border border-gold-400/50 rounded-[18px]",
+  pauseText: "text-ink-900 font-semibold",
+  pauseSub: "text-mocha-500",
+  pauseIconBg: "bg-gold-400/30 text-ink-900",
+  pauseBtn: "bg-gold-600 text-ink-900 hover:brightness-105 rounded-[8px]",
+  dot: "bg-gold-600 ring-2 ring-gold-300",
+  dotDone: "bg-success-500",
+  dotPending: "bg-mocha-300",
+  chip1: "bg-navy-700/10 text-navy-700 border border-navy-700/25",
+  chip2: "bg-gold-600/10 text-gold-600 border border-gold-600/30",
+  chip3: "bg-parchment-100 text-mocha-500 border border-mocha-300",
+  logoBg: "bg-[radial-gradient(circle_at_30%_20%,#1F3350,#241C16_130%)]",
+  logoChar: "text-parchment-50",
+  titleColor: "text-parchment-50",
+  subtitleColor: "text-gold-400",
+  topBar: "bg-mocha-900 border-b border-mocha-700",
+  modeActive: "bg-navy-700 text-parchment-50 font-semibold rounded-full",
+  modeInactive: "text-mocha-500 hover:text-ink-900 rounded-full",
+  langActive: "bg-gold-600 text-ink-900 font-semibold rounded-full",
+  langInactive: "text-parchment-50/70 hover:text-parchment-50 rounded-full",
+  errBox: "bg-red-600/10 border border-red-600/30 text-red-700 rounded-[12px]",
+  footer: "text-mocha-500",
+  footerLink: "text-navy-700 hover:text-gold-600",
+  dropdown: "bg-parchment-100 border border-mocha-300 shadow-card rounded-[18px]",
+  dropItem: "hover:bg-parchment-300 text-ink-900",
+  dropItemActive: "bg-gold-600/10 border-s-[3px] border-s-gold-600",
+  dropSearch: "bg-parchment-100 border-[1.5px] border-gold-600 text-ink-900 placeholder:text-mocha-500 shadow-[0_0_0_3px_rgba(185,143,53,0.16)] rounded-[12px]",
+  dropNum: "bg-navy-700 text-parchment-50",
+  dropNumActive: "bg-gold-600 text-ink-900",
+  dropTrigger: "bg-parchment-100 border border-mocha-300 hover:border-navy-700 focus:border-navy-700 rounded-[12px]",
   reciterStyle: {
-    Murattal: "bg-forest-700/25 text-teal-500",
-    Mujawwad: "bg-gold-500/15 text-gold-300",
-    Muallim: "bg-ink-700 text-[#AAA99F]",
+    Murattal: "bg-success-500 text-white",
+    Mujawwad: "bg-purple-600 text-white",
+    Muallim: "bg-white/20 text-white",
   },
-  reciterCard: "bg-ink-900 border border-sand-200/15 hover:border-gold-500/40 rounded-2xl",
-  reciterCardActive: "bg-ink-800 border-2 border-gold-500 shadow-raised",
-  reciterAvatar: "bg-gradient-to-br from-forest-700 to-ink-800 text-gold-300 ring-1 ring-gold-500/20",
-  reciterAvatarActive: "bg-gold-500 text-[#17130c] ring-2 ring-gold-300",
+  reciterAvatar: "bg-white/15 border-2 border-white/35 text-white",
+  reciterCardActive: "outline outline-2 outline-gold-600 outline-offset-2",
+  reciterCheck: "bg-white text-navy-700",
   isChild: false,
-  roundCard: "rounded-2xl",
+  roundCard: "rounded-[12px]",
 };
 
-// ── Child theme: "فاستمعوا له" light/day mode — sand, forest green, gold ────
-// Same brand family as adult mode (not a disconnected palette), just the
-// design system's "light" semantic tokens plus larger radii/touch targets.
 export const childTheme: Theme = {
-  pageBg: "bg-gradient-to-br from-sand-100 via-sand-200/50 to-sand-100",
-  pagePattern: false,
-  card: "bg-[#FBF7EF] border-2 border-gold-500/30 shadow-xl rounded-3xl",
-  playerCard: "bg-[#FBF7EF] border-2 border-gold-500/30 shadow-xl rounded-3xl overflow-hidden",
-  label: "text-forest-700 font-bold",
-  muted: "text-[#68736D]",
-  primary: "text-[#1C2823]",
-  accent: "text-gold-500",
-  btnPrimary: "bg-gold-500 hover:bg-gold-300 active:bg-gold-500 text-[#2b2110] font-bold shadow-lg shadow-gold-500/25 rounded-3xl text-base",
-  btnSecondary: "border-2 border-forest-700/25 text-forest-700 hover:bg-forest-700/5 rounded-3xl",
-  btnStop: "text-[#68736D] hover:text-red-500 hover:bg-red-500/10",
-  chip: "bg-white text-forest-700 border-2 border-gold-500/25 hover:border-gold-500/60 rounded-3xl",
-  chipActive: "bg-gold-500 text-[#2b2110] border-gold-500 rounded-3xl font-bold",
-  input: "bg-sand-100 border-2 border-gold-500/25 text-[#1C2823] focus:border-gold-500 placeholder:text-[#a39a86] rounded-3xl",
-  toggleOn: "bg-gold-500",
-  toggleOff: "bg-[#e4d8c3]",
-  pbBg: "bg-sand-200",
-  pbFill: "bg-gold-500",
-  pb2Fill: "bg-teal-500",
-  playerHeader: "bg-[radial-gradient(circle_at_50%_35%,rgba(88,166,154,0.18),transparent_45%)]",
-  phPrimary: "text-[#1C2823]",
-  phSecondary: "text-forest-700",
-  phDot: "bg-teal-500",
-  pauseBanner: "bg-gold-500/10 border-2 border-gold-500/30 rounded-3xl",
-  pauseText: "text-forest-700 font-bold",
-  pauseSub: "text-teal-500",
-  pauseIconBg: "bg-gold-500/15 text-gold-500",
-  pauseBtn: "bg-forest-700/10 text-forest-700 hover:bg-forest-700/20 rounded-2xl",
-  dot: "bg-gold-500 ring-2 ring-gold-300/60",
-  dotDone: "bg-teal-500",
-  dotPending: "bg-sand-200",
-  chip1: "bg-teal-500/10 text-teal-600 border border-teal-500/25",
-  chip2: "bg-gold-500/10 text-[#9A722E] border border-gold-500/30",
-  chip3: "bg-sand-100 text-forest-700 border border-forest-700/15",
-  logoBg: "bg-gradient-to-br from-gold-500 to-gold-300",
-  logoChar: "text-[#2b2110]",
-  titleColor: "text-forest-700",
-  subtitleColor: "text-gold-500",
-  topBar: "bg-[#FBF7EF]/95 border-b-2 border-gold-500/15 backdrop-blur-sm",
-  modeActive: "bg-gold-500 text-[#2b2110] font-bold rounded-2xl",
-  modeInactive: "text-forest-700 hover:bg-gold-500/10 rounded-2xl",
-  langActive: "bg-teal-500 text-white font-bold rounded-2xl",
-  langInactive: "text-teal-600 hover:bg-teal-500/10 rounded-2xl",
-  errBox: "bg-red-500/10 border border-red-500/30 text-red-500 rounded-2xl",
-  footer: "text-[#a39a86]",
-  footerLink: "text-forest-700 hover:text-gold-500",
-  dropdown: "bg-[#FBF7EF] border-2 border-gold-500/25 shadow-xl rounded-2xl",
-  dropItem: "hover:bg-gold-500/10 text-[#1C2823]",
-  dropItemActive: "bg-gold-500/10",
-  dropSearch: "bg-sand-100 border-2 border-gold-500/20 text-[#1C2823] placeholder:text-[#a39a86] focus:border-gold-500 rounded-xl",
-  dropNum: "bg-gold-500/15 text-[#9A722E]",
-  dropTrigger: "bg-[#FBF7EF] border-2 border-gold-500/25 hover:border-gold-500/50 focus:border-gold-500 rounded-3xl",
-  reciterStyle: {
-    Murattal: "bg-teal-500/15 text-teal-600",
-    Mujawwad: "bg-violet-100 text-violet-700",
-    Muallim: "bg-gold-500/15 text-[#9A722E]",
-  },
-  reciterCard: "bg-[#FBF7EF] border-2 border-gold-500/20 hover:border-gold-500/50 rounded-3xl",
-  reciterCardActive: "bg-white border-2 border-gold-500 shadow-xl shadow-gold-500/20",
-  reciterAvatar: "bg-gradient-to-br from-gold-300 to-gold-500 text-[#2b2110] ring-1 ring-gold-500/30",
-  reciterAvatarActive: "bg-gold-500 text-[#2b2110] ring-2 ring-forest-700/40",
+  ...adultTheme,
+  btnPrimary: "bg-teal-700 hover:brightness-110 text-parchment-50 font-bold shadow-card",
+  logoBg: "bg-[radial-gradient(circle_at_30%_20%,#1E4B44,#241C16_130%)]",
+  modeActive: "bg-teal-700 text-parchment-50 font-semibold rounded-full",
+  footerLink: "text-teal-700 hover:text-gold-600",
+  dropNum: "bg-teal-700 text-parchment-50",
+  dropTrigger: "bg-parchment-100 border border-mocha-300 hover:border-teal-700 focus:border-teal-700 rounded-[12px]",
+  reciterCheck: "bg-white text-teal-700",
   isChild: true,
-  roundCard: "rounded-3xl",
 };
 
 export function getTheme(mode: Mode): Theme {

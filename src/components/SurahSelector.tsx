@@ -65,10 +65,10 @@ export default function SurahSelector({ value, onChange }: Props) {
               {selected.number}
             </span>
             <div>
-              <div className={`font-semibold ${theme.primary}`}>
+              <div className={`font-semibold ${theme.primary} ${lang === "ar" ? "font-quran" : ""}`}>
                 {lang === "ar" ? selected.name : selected.englishName}
               </div>
-              <div className={`text-xs ${theme.muted}`}>
+              <div className={`text-xs ${theme.muted} ${lang === "en" ? "font-quran" : ""}`}>
                 {lang === "ar" ? selected.englishName : selected.name} · {selected.numberOfAyahs} {tr("ayahCount")}
               </div>
             </div>
@@ -121,14 +121,16 @@ export default function SurahSelector({ value, onChange }: Props) {
                         surah.number === value ? theme.dropItemActive : theme.dropItem
                       }`}
                     >
-                      <span className={`text-xs font-bold rounded-md px-1.5 py-0.5 min-w-[2rem] text-center flex-shrink-0 ${theme.dropNum}`}>
+                      <span className={`text-xs font-bold rounded-md px-1.5 py-0.5 min-w-[2rem] text-center flex-shrink-0 ${
+                        surah.number === value ? theme.dropNumActive : theme.dropNum
+                      }`}>
                         {surah.number}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className={`font-medium text-sm ${theme.primary}`}>
+                        <div className={`font-medium text-sm ${theme.primary} ${lang === "ar" ? "font-quran" : ""}`}>
                           {lang === "ar" ? surah.name : surah.englishName}
                         </div>
-                        <div className={`text-xs truncate ${theme.muted}`}>
+                        <div className={`text-xs truncate ${theme.muted} ${lang === "en" ? "font-quran" : ""}`}>
                           {lang === "ar" ? surah.englishName : surah.name} · {surah.numberOfAyahs} {tr("ayahCount")}
                         </div>
                       </div>

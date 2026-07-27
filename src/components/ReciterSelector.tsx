@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { RECITERS } from "@/lib/reciters";
 import { Reciter } from "@/types";
 import { useApp } from "@/contexts/AppContext";
+import { RECITER_ACCENTS } from "@/lib/themes";
 
 interface Props {
   value: string;
@@ -85,7 +86,7 @@ export default function ReciterSelector({ value, onChange }: Props) {
         <div
           role="listbox"
           aria-label={tr("reciter")}
-          className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 py-1 -mx-1"
+          className="flex gap-3.5 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 py-1 -mx-1"
           style={{ scrollPaddingInlineStart: "0.25rem" }}
         >
           {results.map((reciter, index) => {
@@ -100,23 +101,23 @@ export default function ReciterSelector({ value, onChange }: Props) {
                 tabIndex={selected || (!results.some((r) => r.id === value) && index === 0) ? 0 : -1}
                 onClick={() => onChange(reciter)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className={`relative flex-shrink-0 snap-start w-36 p-3 flex flex-col items-center gap-2 text-center transition-all touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 ${
-                  selected ? theme.reciterCardActive : theme.reciterCard
-                } ${theme.isChild ? "rounded-3xl" : "rounded-2xl"} border`}
+                className={`relative flex-shrink-0 snap-start w-[172px] px-3.5 pt-[18px] pb-4 flex flex-col items-center text-center transition-transform hover:-translate-y-1 touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-600 shadow-card rounded-[18px] ${
+                  RECITER_ACCENTS[index % RECITER_ACCENTS.length]
+                } ${selected ? theme.reciterCardActive : ""}`}
               >
-                {selected && (
-                  <span className="absolute top-2 end-2 w-5 h-5 flex items-center justify-center rounded-full bg-gold-500 text-[#17130c]">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                )}
+                <span
+                  className={`absolute start-2.5 top-2.5 w-5 h-5 flex items-center justify-center rounded-full transition-all ${theme.reciterCheck} ${
+                    selected ? "opacity-100 scale-100" : "opacity-0 scale-50"
+                  }`}
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
 
                 <span
-                  className={`w-14 h-14 flex items-center justify-center rounded-2xl font-bold px-1 text-center leading-tight ${
-                    selected ? theme.reciterAvatarActive : theme.reciterAvatar
-                  }`}
-                  style={{ fontSize: "11px" }}
+                  className={`w-16 h-16 flex items-center justify-center rounded-full font-wordmark font-bold px-1 text-center leading-tight mt-1 mb-3 ${theme.reciterAvatar}`}
+                  style={{ fontSize: "12px" }}
                   aria-hidden="true"
                 >
                   <span className="line-clamp-2 break-words" dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -125,26 +126,28 @@ export default function ReciterSelector({ value, onChange }: Props) {
                 </span>
 
                 <div className="min-w-0 w-full">
-                  <div className={`font-semibold text-sm truncate ${theme.primary}`} dir={lang === "ar" ? "rtl" : undefined}>
+                  <div
+                    className={`font-bold text-sm text-white truncate ${lang === "ar" ? "font-quran" : ""}`}
+                    dir={lang === "ar" ? "rtl" : undefined}
+                  >
                     {lang === "ar" ? reciter.arabicName : reciter.name}
                   </div>
-                  <div className={`text-xs truncate ${theme.muted}`} dir={lang === "en" ? "rtl" : undefined}>
+                  <div
+                    className={`text-xs text-white/80 truncate mt-0.5 ${lang === "en" ? "font-quran" : ""}`}
+                    dir={lang === "en" ? "rtl" : undefined}
+                  >
                     {lang === "ar" ? reciter.name : reciter.arabicName}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-1">
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${theme.reciterStyle[reciter.style] ?? theme.dropNum}`}>
-                    {styleLabel(reciter.style)}
-                  </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${theme.chip1}`}>
-                    {reciter.bitrate}
-                  </span>
-                </div>
+                <span className={`inline-block mt-2.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full ${theme.reciterStyle[reciter.style] ?? "bg-white/20 text-white"}`}>
+                  {styleLabel(reciter.style)}
+                </span>
 
-                {reciter.source === "mp3quran" && (
-                  <div className={`text-[10px] leading-tight ${theme.muted}`}>{tr("fullSurahOnly")}</div>
-                )}
+                <div className="text-[11px] text-white/70 mt-2 leading-snug">
+                  {reciter.bitrate}
+                  {reciter.source === "mp3quran" && ` · ${tr("fullSurahOnly")}`}
+                </div>
               </button>
             );
           })}
