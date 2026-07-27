@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useRef, useState } from "react";
 import { RECITERS } from "@/lib/reciters";
 import { Reciter } from "@/types";
 import { useApp } from "@/contexts/AppContext";
@@ -10,129 +10,144 @@ interface Props {
   onChange: (reciter: Reciter) => void;
 }
 
+/** First *word* of a name — never a single-letter initial (e.g. "Mishary", not "M"). */
+function firstWord(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
 export default function ReciterSelector({ value, onChange }: Props) {
   const { theme, tr, lang } = useApp();
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-  const selected = RECITERS.find((r) => r.id === value);
-  const results = RECITERS.filter(
-    (r) =>
-      !query ||
-      r.name.toLowerCase().includes(query.toLowerCase()) ||
-      r.arabicName.includes(query)
-  );
   const styleLabel = (style: Reciter["style"]) =>
     lang === "ar"
       ? ({ Murattal: "مرتل", Mujawwad: "مجود", Muallim: "معلم" }[style])
       : style;
 
-  useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+  const results = useMemo(
+    () =>
+      RECITERS.filter(
+        (r) =>
+          !query ||
+          r.name.toLowerCase().includes(query.toLowerCase()) ||
+          r.arabicName.includes(query)
+      ),
+    [query]
+  );
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
+  function focusCard(index: number) {
+    const target = results[index];
+    if (!target) return;
+    cardRefs.current[target.id]?.focus();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    const forward = lang === "ar" ? "ArrowLeft" : "ArrowRight";
+    const backward = lang === "ar" ? "ArrowRight" : "ArrowLeft";
+    if (e.key === forward) {
+      e.preventDefault();
+      focusCard(Math.min(index + 1, results.length - 1));
+    } else if (e.key === backward) {
+      e.preventDefault();
+      focusCard(Math.max(index - 1, 0));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      focusCard(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusCard(results.length - 1);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside, { passive: true });
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, []);
-
-  function select(reciter: Reciter) {
-    onChange(reciter);
-    setOpen(false);
-    setQuery("");
   }
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between px-4 py-3 text-start focus:outline-none transition-colors ${theme.dropTrigger}`}
-      >
-        {selected ? (
-          <div className="flex items-center gap-3">
-            <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${theme.reciterStyle[selected.style] ?? theme.dropNum}`}>
-              {styleLabel(selected.style)}
-            </span>
-            <div>
-              <div className={`font-semibold text-sm ${theme.primary}`} dir={lang === "ar" ? "rtl" : undefined}>
-                {lang === "ar" ? selected.arabicName : selected.name}
-              </div>
-              <div className={`text-xs ${theme.muted}`} dir={lang === "en" ? "rtl" : undefined}>
-                {lang === "ar" ? selected.name : selected.arabicName}
-              </div>
-              {selected.source === "mp3quran" && (
-                <div className={`text-xs mt-0.5 ${theme.muted}`}>{tr("fullSurahOnly")}</div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <span className={theme.muted}>{tr("selectReciter")}</span>
-        )}
+    <div>
+      <label className="relative block mb-3">
         <svg
-          className={`w-5 h-5 flex-shrink-0 transition-transform ${theme.muted} ${open ? "rotate-180" : ""}`}
+          className={`pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 ${theme.muted}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m20 20-4.2-4.2m1.2-4.3a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z" />
         </svg>
-      </button>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={tr("searchReciter")}
+          aria-label={tr("searchReciter")}
+          className={`w-full ps-9 pe-3 py-2.5 text-sm focus:outline-none transition-colors ${theme.input}`}
+        />
+      </label>
 
-      {open && (
-        <div className={`absolute z-50 w-full mt-2 overflow-hidden ${theme.dropdown}`}>
-          <div className="p-3">
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={tr("searchReciter")}
-              className={`w-full px-3 py-2 text-sm focus:outline-none ${theme.dropSearch}`}
-            />
-          </div>
-          <ul className="max-h-64 overflow-y-auto">
-            {results.length === 0 ? (
-              <li className={`px-4 py-3 text-sm text-center ${theme.muted}`}>{tr("noReciters")}</li>
-            ) : (
-              results.map((reciter) => (
-                <li key={reciter.id}>
-                  <button
-                    type="button"
-                    onClick={() => select(reciter)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-start transition-colors ${
-                      reciter.id === value ? theme.dropItemActive : theme.dropItem
-                    }`}
-                  >
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-md flex-shrink-0 ${theme.reciterStyle[reciter.style] ?? theme.dropNum}`}>
-                      {styleLabel(reciter.style)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-medium text-sm ${theme.primary}`} dir={lang === "ar" ? "rtl" : undefined}>
-                        {lang === "ar" ? reciter.arabicName : reciter.name}
-                      </div>
-                      <div className={`text-xs ${theme.muted}`} dir={lang === "en" ? "rtl" : undefined}>
-                        {lang === "ar" ? reciter.name : reciter.arabicName}
-                      </div>
-                      {reciter.source === "mp3quran" && (
-                        <div className={`text-xs mt-0.5 ${theme.muted}`}>{tr("fullSurahOnly")}</div>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              ))
-            )}
-          </ul>
+      {results.length === 0 ? (
+        <p className={`text-sm text-center py-6 ${theme.muted}`}>{tr("noReciters")}</p>
+      ) : (
+        <div
+          role="listbox"
+          aria-label={tr("reciter")}
+          className="flex gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory px-1 py-1 -mx-1"
+          style={{ scrollPaddingInlineStart: "0.25rem" }}
+        >
+          {results.map((reciter, index) => {
+            const selected = reciter.id === value;
+            return (
+              <button
+                key={reciter.id}
+                ref={(el) => { cardRefs.current[reciter.id] = el; }}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                tabIndex={selected || (!results.some((r) => r.id === value) && index === 0) ? 0 : -1}
+                onClick={() => onChange(reciter)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                className={`relative flex-shrink-0 snap-start w-36 p-3 flex flex-col items-center gap-2 text-center transition-all touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 ${
+                  selected ? theme.reciterCardActive : theme.reciterCard
+                } ${theme.isChild ? "rounded-3xl" : "rounded-2xl"} border`}
+              >
+                {selected && (
+                  <span className="absolute top-2 end-2 w-5 h-5 flex items-center justify-center rounded-full bg-gold-500 text-[#17130c]">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                )}
+
+                <span
+                  className={`w-14 h-14 flex items-center justify-center rounded-2xl font-bold px-1 text-center leading-tight ${
+                    selected ? theme.reciterAvatarActive : theme.reciterAvatar
+                  }`}
+                  style={{ fontSize: "11px" }}
+                  aria-hidden="true"
+                >
+                  <span className="line-clamp-2 break-words" dir={lang === "ar" ? "rtl" : "ltr"}>
+                    {firstWord(lang === "ar" ? reciter.arabicName : reciter.name)}
+                  </span>
+                </span>
+
+                <div className="min-w-0 w-full">
+                  <div className={`font-semibold text-sm truncate ${theme.primary}`} dir={lang === "ar" ? "rtl" : undefined}>
+                    {lang === "ar" ? reciter.arabicName : reciter.name}
+                  </div>
+                  <div className={`text-xs truncate ${theme.muted}`} dir={lang === "en" ? "rtl" : undefined}>
+                    {lang === "ar" ? reciter.name : reciter.arabicName}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-1">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${theme.reciterStyle[reciter.style] ?? theme.dropNum}`}>
+                    {styleLabel(reciter.style)}
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${theme.chip1}`}>
+                    {reciter.bitrate}
+                  </span>
+                </div>
+
+                {reciter.source === "mp3quran" && (
+                  <div className={`text-[10px] leading-tight ${theme.muted}`}>{tr("fullSurahOnly")}</div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

@@ -19,7 +19,7 @@ interface NextItem {
 }
 
 export default function AudioPlayer({ playerState }: Props) {
-  const { theme, tr } = useApp();
+  const { theme, tr, lang } = useApp();
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [status, setStatus] = useState<PlaybackStatus>({
@@ -86,7 +86,7 @@ export default function AudioPlayer({ playerState }: Props) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `${currentSurah?.englishName ?? "Quran"} - Ayah ${ayahNumber}`,
       artist: currentReciter?.name ?? "Quran Recitation",
-      album: "حامل القرآن",
+      album: "فاستمعوا له",
       artwork: [
         { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
         { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
@@ -447,39 +447,56 @@ export default function AudioPlayer({ playerState }: Props) {
     <>
       <audio ref={audioRef} preload="auto" playsInline className="hidden" aria-hidden="true" />
       <div className={theme.playerCard}>
-      {/* ── Player header ──────────────────────────────────────────────── */}
-      <div className={`${theme.playerHeader} px-6 py-5`}>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className={`text-xs font-medium uppercase tracking-wider mb-1 ${theme.phSecondary}`}>
+      {/* ── Now Playing hero ─────────────────────────────────────────────── */}
+      <div className={`relative px-6 pt-6 pb-4 sm:px-8 sm:pt-8 text-center ${theme.playerHeader}`}>
+        <div className="flex items-center justify-between text-start">
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full ${theme.phDot} ${status.isPlaying ? "animate-pulse" : ""}`} />
+            <span className={`text-xs font-medium uppercase tracking-wider ${theme.phSecondary}`}>
               {tr("nowPlaying")}
-            </div>
-            <div className={`font-bold text-xl leading-tight ${theme.phPrimary}`}>
-              {surah ? surah.englishName : "—"}
-            </div>
-            {surah && (
-              <div className={`text-sm mt-0.5 ${theme.phSecondary}`} dir="rtl">
-                {surah.name}
-              </div>
-            )}
+            </span>
           </div>
-          <div className="text-end">
-            <div className={`text-xs ${theme.phSecondary}`}>{tr("ayahsLabel")}</div>
-            <div className={`font-bold text-lg ${theme.phPrimary}`}>
+          <div className={`text-xs ${theme.phSecondary}`}>
+            {tr("ayahsLabel")}{" "}
+            <span className={`font-bold ${theme.phPrimary}`}>
               {playerState.startAyah === playerState.endAyah
                 ? playerState.startAyah
                 : `${playerState.startAyah}–${playerState.endAyah}`}
-            </div>
-            <div className={`text-xs ${theme.phSecondary}`}>
-              {ayahCount} {tr("ayahCount")}
-            </div>
+            </span>
           </div>
         </div>
+
+        {/* Decorative waveform (aria-hidden — purely visual) */}
+        <div className="flex items-center justify-center gap-[3px] h-8 mt-4" aria-hidden="true" dir="ltr">
+          {Array.from({ length: 15 }, (_, i) => (
+            <span
+              key={i}
+              className={`w-[3px] rounded-full ${theme.pbFill} ${status.isPlaying ? "animate-pulse" : ""}`}
+              style={{
+                height: `${20 + ((i * 37) % 60)}%`,
+                opacity: 0.75,
+                animationDelay: `${i * 80}ms`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className={`mx-auto mt-4 w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] flex items-center justify-center rounded-2xl font-quran text-xl ${theme.reciterAvatarActive}`}>
+          {surah?.number ?? "—"}
+        </div>
+
+        {surah && (
+          <p className={`font-quran mt-3 text-lg sm:text-xl ${theme.phPrimary}`} dir="rtl">
+            {surah.name}
+          </p>
+        )}
+        <h2 className={`font-bold text-xl leading-tight mt-1 ${theme.phPrimary}`}>
+          {surah ? surah.englishName : "—"}
+        </h2>
         {reciter && (
-          <div className="mt-3 flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${theme.phDot}`} />
-            <span className={`text-sm ${theme.phSecondary}`}>{reciter.name}</span>
-          </div>
+          <p className={`text-sm mt-1 ${theme.phSecondary}`}>
+            {lang === "ar" ? reciter.arabicName : reciter.name} · {tr("repeat")} {status.currentRepeat}/{totalRepeatsDisplay}
+          </p>
         )}
       </div>
 

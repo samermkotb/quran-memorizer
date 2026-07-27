@@ -1,11 +1,11 @@
 {
-  "name": "Quran Memorizer",
-  "short_name": "Quran",
+  "name": "فاستمعوا له",
+  "short_name": "فاستمعوا له",
   "description": "Listen and repeat Quran ayahs for memorization",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0fdf4",
-  "theme_color": "#10b981",
+  "background_color": "#101512",
+  "theme_color": "#171e1b",
   "orientation": "portrait-primary",
   "icons": [
     {

@@ -1,12 +1,14 @@
-# Quran Memorizer
+# فاستمعوا له (Listen to Him)
 
 A clean, shareable web app for memorizing Quran recitation. Select any Surah and ayah range, choose a reciter, set repeat options, and share your session with a link.
+
+Visual design follows the فاستمعوا له design system — see [`docs/design-portfolio.md`](docs/design-portfolio.md) for the full Figma-ready specification.
 
 ## Features
 
 - **Surah selector** — searchable dropdown with all 114 surahs (Arabic + English)
 - **Ayah range** — pick start and end ayah; validated against surah length
-- **25 reciters** — multiple styles (Murattal / Mujawwad / Muallim), from two structured audio sources
+- **25 reciters** — horizontally swipeable reciter cards, multiple styles (Murattal / Mujawwad / Muallim), from two structured audio sources
 - **Repeat control** — repeat N times or loop infinitely
 - **Speed control** — 0.5× to 2× playback rate
 - **Repeat pause** — insert a fixed or recitation-length practice pause after each ayah

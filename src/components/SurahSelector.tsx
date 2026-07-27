@@ -16,7 +16,7 @@ export default function SurahSelector({ value, onChange }: Props) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const results = searchSurahs(query);
   const selected = SURAHS.find((s) => s.number === value);
@@ -26,19 +26,22 @@ export default function SurahSelector({ value, onChange }: Props) {
   }, [open]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside, { passive: true });
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, []);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    setQuery("");
+    triggerRef.current?.focus();
+  }
 
   function select(surah: Surah) {
     onChange(surah);
@@ -47,10 +50,13 @@ export default function SurahSelector({ value, onChange }: Props) {
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         className={`w-full flex items-center justify-between px-4 py-3 text-start focus:outline-none transition-colors ${theme.dropTrigger}`}
       >
         {selected ? (
@@ -79,46 +85,59 @@ export default function SurahSelector({ value, onChange }: Props) {
       </button>
 
       {open && (
-        <div className={`absolute z-50 w-full mt-2 overflow-hidden ${theme.dropdown}`}>
-          <div className={`p-3 border-b ${theme.muted}`} style={{ borderColor: "inherit" }}>
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={tr("searchSurah")}
-              className={`w-full px-3 py-2 text-sm focus:outline-none ${theme.dropSearch}`}
-            />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            aria-label={tr("selectSurah")}
+            onClick={close}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className={`relative w-full sm:w-[520px] max-h-[85dvh] sm:max-h-[70dvh] flex flex-col overflow-hidden rounded-t-3xl sm:rounded-2xl pb-[env(safe-area-inset-bottom)] ${theme.dropdown}`}
+          >
+            <div className="sm:hidden w-10 h-1 rounded-full bg-current opacity-20 mx-auto mt-2.5" />
+            <div className="p-3 flex-shrink-0">
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={tr("searchSurah")}
+                className={`w-full px-3 py-2.5 text-sm focus:outline-none ${theme.dropSearch}`}
+              />
+            </div>
+            <ul ref={listRef} className="overflow-y-auto flex-1">
+              {results.length === 0 ? (
+                <li className={`px-4 py-3 text-sm text-center ${theme.muted}`}>{tr("noSurahs")}</li>
+              ) : (
+                results.map((surah) => (
+                  <li key={surah.number}>
+                    <button
+                      type="button"
+                      onClick={() => select(surah)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-start transition-colors ${
+                        surah.number === value ? theme.dropItemActive : theme.dropItem
+                      }`}
+                    >
+                      <span className={`text-xs font-bold rounded-md px-1.5 py-0.5 min-w-[2rem] text-center flex-shrink-0 ${theme.dropNum}`}>
+                        {surah.number}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-medium text-sm ${theme.primary}`}>
+                          {lang === "ar" ? surah.name : surah.englishName}
+                        </div>
+                        <div className={`text-xs truncate ${theme.muted}`}>
+                          {lang === "ar" ? surah.englishName : surah.name} · {surah.numberOfAyahs} {tr("ayahCount")}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
-          <ul ref={listRef} className="max-h-64 overflow-y-auto">
-            {results.length === 0 ? (
-              <li className={`px-4 py-3 text-sm text-center ${theme.muted}`}>{tr("noSurahs")}</li>
-            ) : (
-              results.map((surah) => (
-                <li key={surah.number}>
-                  <button
-                    type="button"
-                    onClick={() => select(surah)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-start transition-colors ${
-                      surah.number === value ? theme.dropItemActive : theme.dropItem
-                    }`}
-                  >
-                    <span className={`text-xs font-bold rounded-md px-1.5 py-0.5 min-w-[2rem] text-center flex-shrink-0 ${theme.dropNum}`}>
-                      {surah.number}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className={`font-medium text-sm ${theme.primary}`}>
-                        {lang === "ar" ? surah.name : surah.englishName}
-                      </div>
-                      <div className={`text-xs truncate ${theme.muted}`}>
-                        {lang === "ar" ? surah.englishName : surah.name} · {surah.numberOfAyahs} {tr("ayahCount")}
-                      </div>
-                    </div>
-                  </button>
-                </li>
-              ))
-            )}
-          </ul>
         </div>
       )}
     </div>

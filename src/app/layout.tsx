@@ -1,12 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Cairo, Amiri_Quran } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
-const inter = Inter({ subsets: ["latin"] });
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-ui",
+  display: "swap",
+});
+
+const amiriQuran = Amiri_Quran({
+  subsets: ["arabic"],
+  weight: "400",
+  variable: "--font-quran",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "حامل القرآن — Listen & Repeat",
+  title: "فاستمعوا له — Listen & Repeat",
   description:
     "Listen to any Quran segment with your choice of reciter, repeat ayahs for memorization, and share sessions with friends.",
   keywords: ["Quran", "Memorization", "Hafiz", "Islamic", "Audio", "Reciter"],
@@ -14,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "حامل القرآن",
+    title: "فاستمعوا له",
   },
 };
 
@@ -23,7 +35,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#10b981",
+  themeColor: "#171e1b",
 };
 
 export default function RootLayout({
@@ -33,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${cairo.variable} ${amiriQuran.variable} font-ui antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

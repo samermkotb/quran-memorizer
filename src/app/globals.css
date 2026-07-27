@@ -1,8 +1,35 @@
 @import "tailwindcss";
 
-/* Islamic star-lattice pattern for adult mode (very subtle, 2% opacity) */
+/* ── فاستمعوا له design tokens ───────────────────────────────────────────── */
+/* Derived from the "فاستمعوا له" Claude Design reference (design-tokens.json). */
+@theme {
+  --color-ink-950: #101512;
+  --color-ink-900: #171e1b;
+  --color-ink-800: #1d2723;
+  --color-ink-700: #25322d;
+
+  --color-forest-700: #24483e;
+  --color-forest-500: #397365;
+
+  --color-gold-500: #c9a55a;
+  --color-gold-300: #ead29b;
+
+  --color-sand-100: #f5efe3;
+  --color-sand-200: #e8dcc4;
+
+  --color-teal-500: #58a69a;
+  --color-red-500: #d66b64;
+
+  --font-ui: "Cairo", system-ui, sans-serif;
+  --font-quran: "Amiri Quran", "Scheherazade New", serif;
+
+  --shadow-raised: 0 24px 70px rgba(0, 0, 0, 0.35);
+  --shadow-raised-light: 0 24px 70px rgba(47, 42, 31, 0.13);
+}
+
+/* Gentle geometric lattice motif — subtle, gold-tinted, not literal Islamic art */
 .islamic-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23d4af37' fill-opacity='0.04'%3E%3Cpath d='M40 0l5 15h15l-12 9 5 15-13-9-13 9 5-15-12-9h15z'/%3E%3Cpath d='M40 50l5 15h15l-12 9 5 15-13-9-13 9 5-15-12-9h15z' opacity='0.5'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23C9A55A' stroke-width='0.6' opacity='0.05'%3E%3Ccircle cx='42' cy='42' r='30'/%3E%3Cpath d='M42 12l7 21h21l-17 13 6 21-17-13-17 13 6-21-17-13h21z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 @layer utilities {
@@ -21,6 +48,12 @@
   .duration-500 {
     animation-duration: 500ms;
   }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes fadeIn {
@@ -36,5 +69,14 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -4,8 +4,9 @@ type Dict = Record<string, string>;
 
 export const translations: Record<Lang, Dict> = {
   en: {
-    appName: "حامل القرآن",
+    appName: "فاستمعوا له",
     tagline: "Listen · Repeat · Memorize",
+    mode: "Mode",
     modeAdult: "Adult",
     modeChild: "Child",
     langToggle: "عربي",
@@ -75,8 +76,9 @@ export const translations: Record<Lang, Dict> = {
     fullSurahOnlyNote: "This reciter provides full-surah audio only. Ayah-range playback, repeat-per-ayah, and pause-after-ayah aren't available — use the player below or download the full surah.",
   },
   ar: {
-    appName: "حامل القرآن",
+    appName: "فاستمعوا له",
     tagline: "اسمع · كرر · احفظ",
+    mode: "الوضع",
     modeAdult: "بالغ",
     modeChild: "طفل",
     langToggle: "English",
