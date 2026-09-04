@@ -10,6 +10,8 @@ import { useApp } from "@/contexts/AppContext";
 import { ChildBoy, ChildGirl, ChildBoy2, ChildGirl2 } from "@/components/ChildIllustrations";
 import SurahSelector from "@/components/SurahSelector";
 import ReciterSelector from "@/components/ReciterSelector";
+import AyahPreview from "@/components/AyahPreview";
+import MushafViewer from "@/components/MushafViewer";
 import AudioPlayer from "@/components/AudioPlayer";
 import ShareButton from "@/components/ShareButton";
 import DownloadButton from "@/components/DownloadButton";
@@ -265,6 +267,10 @@ export default function Home() {
                 }}
                 className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme.input}`}
               />
+              <AyahPreview
+                surahNumber={playerState.surahNumber}
+                ayahNumber={playerState.startAyah}
+              />
             </div>
             <div>
               <label className={`block text-sm mb-2 ${theme.label}`}>{tr("toAyah")}</label>
@@ -283,11 +289,22 @@ export default function Home() {
                 }}
                 className={`w-full px-4 py-3 font-medium focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${theme.input}`}
               />
+              <AyahPreview
+                surahNumber={playerState.surahNumber}
+                ayahNumber={playerState.endAyah}
+              />
             </div>
           </div>
           {reciter?.source === "mp3quran" && (
             <p className={`text-xs ${theme.muted}`}>{tr("fullSurahOnlyNote")}</p>
           )}
+          <MushafViewer
+            surahNumber={playerState.surahNumber}
+            startAyah={playerState.startAyah}
+            endAyah={playerState.endAyah}
+            onSelectRange={(start, end) => update({ startAyah: start, endAyah: end })}
+            readOnly={reciter?.source === "mp3quran"}
+          />
 
           {/* Quick range */}
           {currentSurah && (

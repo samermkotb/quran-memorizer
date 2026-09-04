@@ -8,7 +8,7 @@ Visual design follows the فاستمعوا له design system — see [`docs/des
 
 - **Surah selector** — searchable dropdown with all 114 surahs (Arabic + English)
 - **Ayah range** — pick start and end ayah; validated against surah length
-- **25 reciters** — horizontally swipeable reciter cards, multiple styles (Murattal / Mujawwad / Muallim), from two structured audio sources
+- **26 reciters** — horizontally swipeable reciter cards, multiple styles (Murattal / Mujawwad / Muallim), from two structured audio sources
 - **Repeat control** — repeat N times or loop infinitely
 - **Speed control** — 0.5× to 2× playback rate
 - **Repeat pause** — insert a fixed or recitation-length practice pause after each ayah
@@ -235,6 +235,7 @@ reciter can't be verified on either source, don't add them; list them under
 | **hatem_alwaer** | **Hatem Farid Al-Waer** | Murattal | mp3quran (full surah only) |
 | **raad_alkurdi** | **Raad Al-Kurdi** | Murattal | mp3quran (full surah only) |
 | **abdulrashid_sufi** | **Abdul Rashid Sufi** | Murattal | mp3quran (full surah only) |
+| **luhaidan** | **Mohamed Al-Luhaidan** | Murattal | mp3quran (full surah only) |
 
 Bold rows were added in this round, verified with `curl -I` for HTTP 200 (and
 `access-control-allow-origin: *`, which is what makes client-side download/ZIP possible).

@@ -80,6 +80,14 @@ export interface Theme {
   // Misc
   isChild: boolean;
   roundCard: string;
+  // Ayah-recognition preview (inline text under Start/End Ayah)
+  ayahPreviewBox: string;
+  ayahPreviewText: string;
+  ayahPreviewLabel: string;
+  // Mushaf viewer panel (expandable ayah-by-ayah reading/selection list)
+  mushafRowInRange: string;
+  mushafRowBoundary: string;
+  mushafBoundaryBadge: string;
 }
 
 // Rotating per-card accent covers — the reference's signature "accent per
@@ -163,6 +171,12 @@ export const adultTheme: Theme = {
   reciterCheck: "bg-white text-navy-700",
   isChild: false,
   roundCard: "rounded-[12px]",
+  ayahPreviewBox: "bg-parchment-50 border border-gold-600/40 rounded-[12px]",
+  ayahPreviewText: "text-ink-900 font-quran",
+  ayahPreviewLabel: "text-mocha-500",
+  mushafRowInRange: "bg-gold-600/10",
+  mushafRowBoundary: "bg-gold-600/20 border border-gold-600/50",
+  mushafBoundaryBadge: "bg-gold-600 text-ink-900",
 };
 
 export const childTheme: Theme = {

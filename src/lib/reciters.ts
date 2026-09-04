@@ -249,6 +249,20 @@ export const RECITERS: Reciter[] = [
     mp3quranServer: "https://server16.mp3quran.net/soufi/Rewayat-Hafs-A-n-Assem/",
     bitrate: "128kbps",
   },
+  {
+    // mp3quran.net (reciter id 107, "Mohammed Al-Lohaidan") — full-surah only,
+    // Rewayat Hafs A'n Assem - Murattal, all 114 surahs, verified
+    // https://server8.mp3quran.net/lhdan/001.mp3 and .../114.mp3 (HTTP 200,
+    // access-control-allow-origin: *). Not present on everyayah.com, so no
+    // ayah-by-ayah playback is available for this reciter.
+    id: "luhaidan",
+    name: "Mohamed Al-Luhaidan",
+    arabicName: "محمد اللحيدان",
+    style: "Murattal",
+    source: "mp3quran",
+    mp3quranServer: "https://server8.mp3quran.net/lhdan/",
+    bitrate: "128kbps",
+  },
 ];
 
 export function getReciter(id: string): Reciter | undefined {
