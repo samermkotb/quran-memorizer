@@ -243,6 +243,30 @@ Bold rows were added in this round, verified with `curl -I` for HTTP 200 (and
 those files) — the app disables streaming/download for those specific surahs for that
 reciter and shows an inline message rather than guessing at a substitute URL.
 
+**On `luhaidan` (Mohamed Al-Luhaidan) specifically:** this reciter was requested with
+the expectation of full ayah-by-ayah playback/repetition, the app's core feature. Four
+structured audio sources were checked, not just mp3quran.net, specifically looking for
+a per-ayah (verse-segmented) recording:
+- **everyayah.com** (this app's own ayah-by-ayah CDN) — every reciter folder in its
+  `recitations.js` index was scanned; no match under any spelling.
+- **api.alquran.cloud** audio editions — he is listed (`ar.muhammadalluhaidan`), but
+  tagged `type: "surahbysurah"`, not present in their `"versebyverse"` (ayah-level) list
+  (which does include e.g. Alafasy, Husary, Sudais).
+- **api.quran.com** classic per-ayah audio API — only 12 major reciters total; not
+  among them.
+- **quranicaudio.com** — verified directly: `.../muhammad_alhaidan/001.mp3` returns
+  HTTP 200 (full surah), `.../muhammad_alhaidan/001001.mp3` returns HTTP 404 (no
+  ayah-segmented file exists).
+
+No verified ayah-by-ayah recording of this reciter exists on any source checked. Per
+the "don't fake it" policy, a full-surah file is **never** sliced into fabricated
+per-ayah segments without a verified timing dataset — none exists here. He is
+therefore included as **full-surah-only** (like `islam_sobhi`, `idris_abkar`, etc.):
+no ayah-range playback, no per-ayah repeat, no pause-after-ayah, and no ayah-range
+download. This is enforced the same way as every other `mp3quran`-source reciter —
+including in the ayah-recognition preview and Mushaf viewer, which show his ayah text
+for reference only and never imply per-ayah audio is available.
+
 ## Requested but Unavailable
 
 These reciters were requested but could not be verified on everyayah.com or

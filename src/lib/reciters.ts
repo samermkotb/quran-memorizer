@@ -253,8 +253,27 @@ export const RECITERS: Reciter[] = [
     // mp3quran.net (reciter id 107, "Mohammed Al-Lohaidan") — full-surah only,
     // Rewayat Hafs A'n Assem - Murattal, all 114 surahs, verified
     // https://server8.mp3quran.net/lhdan/001.mp3 and .../114.mp3 (HTTP 200,
-    // access-control-allow-origin: *). Not present on everyayah.com, so no
-    // ayah-by-ayah playback is available for this reciter.
+    // access-control-allow-origin: *).
+    //
+    // No ayah-by-ayah (per-verse) recording of this reciter could be found
+    // on any reliable structured source, despite checking four:
+    //   - everyayah.com (this app's own ayah-by-ayah CDN) — exhaustively
+    //     scanned every reciter folder in recitations.js; no match.
+    //   - api.alquran.cloud audio editions — he IS listed
+    //     (ar.muhammadalluhaidan), but tagged type "surahbysurah", not in
+    //     their "versebyverse" (ayah-level) list.
+    //   - api.quran.com classic per-ayah audio API — only 12 major
+    //     reciters total; not among them.
+    //   - quranicaudio.com — verified directly: .../muhammad_alhaidan/001.mp3
+    //     is HTTP 200 (full surah), .../muhammad_alhaidan/001001.mp3 is
+    //     HTTP 404 (no ayah-segmented file).
+    // Per this app's "don't fake it" policy, a full-surah file is never
+    // sliced into fabricated per-ayah segments without a verified timing
+    // dataset — none exists for this reciter. He is intentionally
+    // full-surah-only: no ayah-by-ayah playback, per-ayah repeat, or ayah
+    // range download for this reciter (enforced by source: "mp3quran"
+    // throughout the app, including AyahPreview/MushafViewer, which show
+    // his ayah text for reference only, never implying per-ayah audio).
     id: "luhaidan",
     name: "Mohamed Al-Luhaidan",
     arabicName: "محمد اللحيدان",
