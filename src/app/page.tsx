@@ -15,6 +15,7 @@ import MushafViewer from "@/components/MushafViewer";
 import AudioPlayer from "@/components/AudioPlayer";
 import ShareButton from "@/components/ShareButton";
 import DownloadButton from "@/components/DownloadButton";
+import VideoCreator from "@/components/video/VideoCreator";
 
 const DEFAULT_STATE: PlayerState = {
   surahNumber: 1,
@@ -479,6 +480,9 @@ export default function Home() {
               numberOfAyahs={maxAyah}
             />
             <ShareButton playerState={playerState} />
+            {currentSurah && (
+              <VideoCreator playerState={playerState} reciter={reciter} surah={currentSurah} />
+            )}
           </div>
         )}
 
