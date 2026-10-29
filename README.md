@@ -84,20 +84,36 @@ and combines it with one or more backgrounds into a **720×1280 (9:16) video at 
   then repeats N times, with the chosen pause after each ayah (none after the last).
   "Match" pause = that ayah's recited duration. Infinite loop can't exist in a file, so it
   renders one pass, and the UI says so.
-- The current ayah's **Uthmani Arabic text** (Amiri Quran), synced to the audio by
-  sequencing the actual per-ayah files. Long ayahs shrink to a readable minimum and then
-  page through while the ayah plays. During pauses the last ayah stays on screen, dimmed.
+- The current ayah's **Uthmani Arabic text** (Tanzil, verbatim) in the bundled Amiri Quran
+  font, with Pickthall's public-domain **English translation** beneath it in a smaller,
+  dimmer face. Ayahs change exactly with the per-ayah audio files. Long ayahs are shown
+  phrase by phrase, cut only between whole words (preferring pause marks), with a calm
+  crossfade between phrases. The timing within an ayah is approximate (by letter share),
+  and the UI says so. During pauses the last passage stays on screen, dimmed. Sources,
+  verification and timing details: [`docs/QURAN-TEXT-SOURCES.md`](docs/QURAN-TEXT-SOURCES.md).
 - Surah name (Arabic + English), ayah range, an ayah-number rosette, the repeat counter,
   and the reciter (Arabic + English), with **فاستمعوا له** branding at the bottom.
 - **Full-surah-only reciters** (mp3quran): the whole surah plays once and the video shows
   the surah title instead of per-ayah text. There is no verified per-ayah timing for those
   files, so the app never guesses which ayah is being recited.
 
-### Backgrounds (10 built-in)
+### Length before rendering
+
+The creator shows the finished video's length (seconds and m:ss, localized in Arabic)
+before anything is rendered. It updates whenever the surah, range, reciter, speed,
+repeats or pause change. It reads only the first 4 KB of each audio file: everyayah MP3s
+carry a LAME header with the exact frame count ("Measured"), and other files fall back to
+size ÷ bitrate ("Approximate") or a letter-count estimate ("Rough estimate"). Results are
+cached. **−/+** steppers adjust the start and end ayah within the surah, and **≈15 / 30 /
+60 s** buttons pick the end ayah closest to that length. Create Video is disabled when the
+measured length is over the 10-minute cap.
+
+### Backgrounds (20 built-in)
 
 Pick one, or several to **rotate**: the total video duration is split into equal slots
-with ~1 s crossfades. Eight are freely licensed clips and two are original procedural
-animations drawn on the canvas.
+with ~1 s crossfades. Eighteen are freely licensed clips and two are original procedural
+animations drawn on the canvas. A clip that fails to load is skipped instead of failing
+the render.
 
 | Background | License |
 |---|---|
@@ -111,14 +127,25 @@ animations drawn on the canvas.
 | Night sky — Alaskan aurora (NASA SVS) | U.S. public domain |
 | Green valley — Tay Valley pasture, by Rose Abrams | **CC BY 4.0** |
 | Islamic geometric motion | Original app artwork (procedural) |
+| Glowing embers | CC0 |
+| Blazing sun (NASA SDO) | U.S. public domain |
+| Deep space — Circinus galaxy (NASA SVS) | U.S. public domain |
+| Peaceful garden — lavender | CC0 |
+| Waterfall — Mt Nimrod | CC0 |
+| Storm and lightning — Colorado | CC0 |
+| Snowy mountains — Rasuwa, by Pustam.EGR | **CC BY 4.0** |
+| Autumn forest — Karelia | CC0 |
+| Flower meadow (USDA) | U.S. public domain |
+| Golden dawn — Shenandoah (NPS) | U.S. public domain |
 
 Full per-asset sources, authors, license evidence, and modifications are in
 [`docs/VIDEO-ASSET-LICENSES.md`](docs/VIDEO-ASSET-LICENSES.md). The single source of truth
 for the app is `src/lib/video/backgrounds.ts`, which also drives the in-app
-"Background credits & licenses" panel. The one CC BY asset is attributed in the in-app
-credits, as a caption burned into the video while it's on screen, and in the share text.
-Clips live in `public/backgrounds/` (~14 MB total, 720×1280 H.264, no audio) and can be
-regenerated with `scripts/process-backgrounds.sh`.
+"Background credits & licenses" panel. The two CC BY assets are attributed in the in-app
+credits, as a caption burned into the video while each is on screen, and in the share text.
+Clips live in `public/backgrounds/` (28.7 MB total, 720×1280 H.264, no audio) and can be
+regenerated with `scripts/process-backgrounds.sh`. Scenes are natural imagery only, with no
+people or text. Fire, sun and garden scenes are not depictions of Hell or Paradise.
 
 ### How it works (fully client-side)
 
@@ -178,15 +205,13 @@ Notes on recorder output:
 
 ### Sharing on mobile
 
-After rendering you get three buttons:
+After rendering you get two buttons:
 
 - **Share Video** calls `navigator.share({ files: [video] })` when
   `navigator.canShare({ files })` is true, which opens the **phone's native share sheet**.
   From there *you* choose WhatsApp, Snapchat, Facebook, Messages, Mail, Photos ("Save
   Video"), or any other installed app that accepts videos.
 - **Save Video** downloads the file with a normal `<a download>`.
-- **Send as Message** opens the same share sheet with a shorter message text, for sending
-  to a chat or contact.
 
 If the browser can't share files, Share falls back to a normal download with a message
 explaining what happened. Closing the share sheet does nothing.
@@ -312,8 +337,10 @@ src/
 │       ├── VideoCreator.tsx        # Create Video panel: selection summary, states, result
 │       ├── BackgroundPicker.tsx    # Thumbnail cards, multi-select with rotation order
 │       ├── VideoExportProgress.tsx # Phase, progress bar, background-pause notice, cancel
-│       ├── VideoShareButton.tsx    # Share Video / Save Video / Send as Message
-│       └── VideoCredits.tsx        # Background credits & licenses
+│       ├── VideoShareButton.tsx    # Share Video / Save Video (native share sheet)
+│       ├── VideoDurationPanel.tsx  # Pre-render length, −/+ ayah steppers, quick lengths
+│       ├── useVideoDuration.ts     # Debounced, cached length estimate hook
+│       └── VideoCredits.tsx        # Background + Quran text/translation credits
 └── lib/
     ├── surahData.ts        # All 114 surahs with ayah counts
     ├── reciters.ts         # Reciter definitions + audio source config
@@ -323,7 +350,10 @@ src/
     │   ├── backgrounds.ts      # Background manifest + license/credit data
     │   ├── proceduralScenes.ts # Original birds + geometric canvas animations
     │   ├── timeline.ts         # Audio fetch/measure, length cap, ayah/pause timeline
-    │   ├── textLayout.ts       # Arabic wrap/fit/paginate, font resolution
+    │   ├── textLayout.ts       # Arabic + English passage wrap/fit, font resolution
+    │   ├── passages.ts         # Lossless phrase splitting + approximate intra-ayah timing
+    │   ├── mp3Duration.ts      # MP3 Xing/Info/LAME header parser (exact durations)
+    │   ├── durationEstimate.ts # Cached pre-render video length
     │   ├── renderer.ts         # Canvas + Web Audio + MediaRecorder pipeline
     │   └── support.ts          # Feature detection, MP4/WebM choice, byte sniffing
     └── shareUtils.ts       # URL encode/decode for shareable links

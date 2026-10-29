@@ -37,7 +37,49 @@ function CreditItem({ bg }: { bg: Background }) {
   );
 }
 
-/** Full attribution list for the built-in backgrounds (required for CC BY assets). */
+/** Sources of the Quran text, translation and font (Tanzil requires a visible credit and link). */
+function TextCredits() {
+  const { theme, tr } = useApp();
+  return (
+    <details className="group">
+      <summary className={`cursor-pointer select-none font-medium ${theme.footerLink}`}>{tr("videoTextCredits")}</summary>
+      <ul className={`mt-2 space-y-1.5 ${theme.muted}`}>
+        <li>
+          {tr("videoTextCreditArabic")}{" "}
+          <a href="https://tanzil.net" target="_blank" rel="noopener noreferrer" className={theme.footerLink} dir="ltr">
+            tanzil.net
+          </a>
+        </li>
+        <li>
+          {tr("videoTextCreditEnglish")}{" "}
+          <a
+            href="https://tanzil.net/trans/en.pickthall"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={theme.footerLink}
+            dir="ltr"
+          >
+            {tr("videoCreditSource")}
+          </a>
+        </li>
+        <li>
+          {tr("videoTextCreditFont")}{" "}
+          <a
+            href="https://github.com/aliftype/amiri"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={theme.footerLink}
+            dir="ltr"
+          >
+            {tr("videoCreditSource")}
+          </a>
+        </li>
+      </ul>
+    </details>
+  );
+}
+
+/** Full attribution list for the built-in backgrounds (required for CC BY assets) and the text sources. */
 export default function VideoCredits({ inVideo }: { inVideo?: Background[] }) {
   const { theme, tr } = useApp();
   return (
@@ -60,6 +102,7 @@ export default function VideoCredits({ inVideo }: { inVideo?: Background[] }) {
           ))}
         </ul>
       </details>
+      <TextCredits />
     </div>
   );
 }

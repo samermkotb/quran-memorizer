@@ -59,6 +59,9 @@ export default function Home() {
             ? decoded.reciterId
             : DEFAULT_RECITER_ID;
 
+        // The shared-session link lives in window.location, which only exists
+        // after hydration, so it has to be applied from an effect, once.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPlayerState({
           surahNumber: decoded.surahNumber,
           startAyah: start,
@@ -481,7 +484,12 @@ export default function Home() {
             />
             <ShareButton playerState={playerState} />
             {currentSurah && (
-              <VideoCreator playerState={playerState} reciter={reciter} surah={currentSurah} />
+              <VideoCreator
+                playerState={playerState}
+                reciter={reciter}
+                surah={currentSurah}
+                onRangeChange={(startAyah, endAyah) => update({ startAyah, endAyah })}
+              />
             )}
           </div>
         )}

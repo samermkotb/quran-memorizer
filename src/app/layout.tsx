@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo, Amiri_Quran, Noto_Naskh_Arabic } from "next/font/google";
+import { Cairo, Noto_Naskh_Arabic } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
@@ -10,11 +11,16 @@ const cairo = Cairo({
   display: "swap",
 });
 
-const amiriQuran = Amiri_Quran({
-  subsets: ["arabic"],
+// Amiri Quran 1.003 (SIL OFL 1.1, https://github.com/aliftype/amiri), bundled
+// locally so Quran text never depends on a runtime font URL. It covers every
+// code point in the bundled Tanzil Uthmani text. See docs/QURAN-TEXT-SOURCES.md.
+const amiriQuran = localFont({
+  src: "../fonts/AmiriQuran-1.003.woff2",
   weight: "400",
+  style: "normal",
   variable: "--font-quran",
   display: "swap",
+  fallback: ["serif"],
 });
 
 const notoNaskhArabic = Noto_Naskh_Arabic({

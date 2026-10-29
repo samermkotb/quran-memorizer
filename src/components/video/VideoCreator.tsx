@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PlayerState, Reciter, Surah } from "@/types";
 import { useApp } from "@/contexts/AppContext";
 import { formatTime } from "@/lib/audioUtils";
-import { getSurahText } from "@/lib/quranText";
+import { getSurahText, getSurahTranslation, useSurahText } from "@/lib/quranText";
 import { BACKGROUNDS, DEFAULT_BACKGROUND_IDS, attributionLine } from "@/lib/video/backgrounds";
 import { detectVideoSupport, VideoContainer, VideoSupport } from "@/lib/video/support";
 import { createRenderSession, renderVideo, RenderProgress, RenderSession } from "@/lib/video/renderer";
@@ -13,11 +13,15 @@ import BackgroundPicker from "./BackgroundPicker";
 import VideoExportProgress from "./VideoExportProgress";
 import VideoShareButton from "./VideoShareButton";
 import VideoCredits from "./VideoCredits";
+import VideoDurationPanel from "./VideoDurationPanel";
+import { useVideoDuration } from "./useVideoDuration";
 
 interface Props {
   playerState: PlayerState;
   reciter: Reciter;
   surah: Surah;
+  /** Changes the app's selected ayah range (clamped by the caller). */
+  onRangeChange: (startAyah: number, endAyah: number) => void;
 }
 
 type Status = "idle" | "rendering" | "done" | "error" | "cancelled";
@@ -29,6 +33,8 @@ interface Result {
   duration: number;
   filename: string;
   backgroundIds: string[];
+  skippedBackgrounds: boolean;
+  translationMissing: boolean;
 }
 
 const ERROR_KEYS: Record<VideoErrorCode, string> = {
@@ -47,7 +53,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function VideoCreator({ playerState, reciter, surah }: Props) {
+export default function VideoCreator({ playerState, reciter, surah, onRangeChange }: Props) {
   const { theme, tr, lang } = useApp();
   const [open, setOpen] = useState(false);
   const [support, setSupport] = useState<VideoSupport | null>(null);
@@ -71,6 +77,11 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
 
   const fullSurah = reciter.source !== "everyayah";
   const rendering = status === "rendering";
+  const { texts: surahTexts } = useSurahText(surah.number);
+  const duration = useVideoDuration(playerState, reciter, surahTexts, open);
+  // Refuse up front when the measured length is already over the cap; a rough
+  // estimate alone never blocks (the renderer still enforces the cap).
+  const blockedTooLong = Boolean(duration.estimate?.overLimit && duration.estimate.precision !== "estimate");
   const rangeLabel = fullSurah
     ? tr("wholeSurah")
     : playerState.startAyah === playerState.endAyah
@@ -98,7 +109,7 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
   }
 
   function handleCreate() {
-    if (!support?.supported || selected.length === 0 || rendering) return;
+    if (!support?.supported || selected.length === 0 || rendering || blockedTooLong) return;
 
     // Created synchronously in the tap so iOS allows audio playback.
     let session: RenderSession;
@@ -125,7 +136,10 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
     void (async () => {
       try {
         let ayahTexts: string[] = [];
+        let ayahTranslations: string[] = [];
         if (!fullSurah) {
+          // The translation is secondary: if it fails, the video shows the Arabic only.
+          const translation = getSurahTranslation(ps.surahNumber).catch(() => [] as string[]);
           try {
             ayahTexts = await getSurahText(ps.surahNumber);
           } catch {
@@ -133,6 +147,8 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
             setStatus("error");
             return;
           }
+          ayahTranslations = await translation;
+          if (ayahTranslations.length !== ayahTexts.length) ayahTranslations = [];
         }
         const canvas = canvasRef.current;
         if (!canvas) throw new VideoError("unsupported");
@@ -144,6 +160,7 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
           reciter,
           surah,
           ayahTexts,
+          ayahTranslations,
           backgrounds,
           mimeType: support.mimeType,
           signal: controller.signal,
@@ -160,7 +177,9 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
           container: out.container,
           duration: out.duration,
           filename: `${safeName}_${range}_${reciter.id}.${out.container}`,
-          backgroundIds: backgrounds.map((b) => b.id),
+          backgroundIds: out.backgrounds.map((b) => b.id),
+          skippedBackgrounds: out.skippedBackgrounds.length > 0,
+          translationMissing: !fullSurah && ayahTranslations.length === 0,
         });
         setStatus("done");
       } catch (err) {
@@ -184,7 +203,12 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
   }
 
   const resultBackgrounds = useMemo(
-    () => (result ? BACKGROUNDS.filter((b) => result.backgroundIds.includes(b.id)) : []),
+    () =>
+      result
+        ? result.backgroundIds
+            .map((id) => BACKGROUNDS.find((b) => b.id === id))
+            .filter((b): b is (typeof BACKGROUNDS)[number] => Boolean(b))
+        : [],
     [result]
   );
 
@@ -203,9 +227,6 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
     "فاستمعوا له",
     ...ccByCredits,
   ].join("\n");
-  const messageText = [`سورة ${surah.name} — ${ayahRangeText}`, reciter.arabicName, "فاستمعوا له", ...ccByCredits].join(
-    "\n"
-  );
 
   if (!open) {
     return (
@@ -275,6 +296,18 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
         )}
       </div>
 
+      {status !== "done" && (
+        <VideoDurationPanel
+          playerState={playerState}
+          reciter={reciter}
+          surah={surah}
+          ayahTexts={surahTexts}
+          duration={duration}
+          disabled={rendering}
+          onRangeChange={onRangeChange}
+        />
+      )}
+
       {support && !support.supported ? (
         <div className={`px-3 py-2 text-sm ${theme.errBox}`} role="alert">
           {tr("videoUnsupported")}
@@ -300,11 +333,12 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
           {!rendering && status !== "done" && (
             <div className="space-y-2">
               <p className={`text-xs ${theme.muted}`}>{tr("videoRealtimeNote")}</p>
+              {!fullSurah && <p className={`text-xs ${theme.muted}`}>{tr("videoTimingNote")}</p>}
               {selected.length === 0 && <p className={`text-xs ${theme.accent}`}>{tr("videoNoBackground")}</p>}
               <button
                 type="button"
                 onClick={handleCreate}
-                disabled={selected.length === 0}
+                disabled={selected.length === 0 || blockedTooLong}
                 className={`w-full py-3.5 font-bold text-base rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnPrimary}`}
               >
                 {tr("videoStart")}
@@ -353,13 +387,14 @@ export default function VideoCreator({ playerState, reciter, surah }: Props) {
                 </div>
               </dl>
               {result.container === "webm" && <p className={`text-xs ${theme.accent}`}>{tr("videoWebmNote")}</p>}
+              {result.skippedBackgrounds && <p className={`text-xs ${theme.accent}`}>{tr("videoBackgroundsSkipped")}</p>}
+              {result.translationMissing && <p className={`text-xs ${theme.accent}`}>{tr("videoTranslationMissing")}</p>}
 
               <VideoShareButton
                 blob={result.blob}
                 filename={result.filename}
                 shareTitle={shareTitle}
                 shareText={shareText}
-                messageText={messageText}
               />
 
               <button

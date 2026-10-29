@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction, useEffect, useId, useRef } from "react";
+import { Dispatch, SetStateAction, useEffect, useId, useRef, useState } from "react";
 import { BACKGROUNDS, ProceduralBackground } from "@/lib/video/backgrounds";
 import { drawProceduralScene } from "@/lib/video/proceduralScenes";
 import { useApp } from "@/contexts/AppContext";
@@ -25,6 +25,8 @@ function ProceduralThumb({ bg }: { bg: ProceduralBackground }) {
 export default function BackgroundPicker({ selected, onChange, disabled }: Props) {
   const { theme, tr, lang } = useApp();
   const labelId = useId();
+  // A poster that fails to load shows a plain tile instead of a broken image.
+  const [brokenPosters, setBrokenPosters] = useState<ReadonlySet<string>>(() => new Set());
 
   function toggle(id: string) {
     if (disabled) return;
@@ -80,8 +82,18 @@ export default function BackgroundPicker({ selected, onChange, disabled }: Props
               }`}
             >
               {bg.kind === "video" ? (
-                // eslint-disable-next-line @next/next/no-img-element -- tiny static poster; next/image adds nothing here
-                <img src={bg.poster} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                brokenPosters.has(bg.id) ? (
+                  <span className="absolute inset-0 bg-gradient-to-b from-mocha-700 to-ink-900" aria-hidden="true" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- tiny static poster; next/image adds nothing here
+                  <img
+                    src={bg.poster}
+                    alt=""
+                    loading="lazy"
+                    onError={() => setBrokenPosters((prev) => new Set(prev).add(bg.id))}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )
               ) : (
                 <ProceduralThumb bg={bg} />
               )}

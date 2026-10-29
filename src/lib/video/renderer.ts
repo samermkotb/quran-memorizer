@@ -12,9 +12,17 @@
 
 import { PlayerState, Reciter, Surah } from "@/types";
 import { createSilentAudioUrl } from "@/lib/audioUtils";
-import { Background, VideoBackground } from "./backgrounds";
+import { Background, getBackground, VideoBackground } from "./backgrounds";
 import { drawProceduralScene } from "./proceduralScenes";
-import { layoutText, resolveFontFamily, TextLayout, toArabicDigits } from "./textLayout";
+import { passageIndexAt, planPassages, Passage } from "./passages";
+import {
+  arabicFont,
+  englishFont,
+  layoutPassage,
+  PassageLayout,
+  resolveFontFamily,
+  toArabicDigits,
+} from "./textLayout";
 import { getAudioContextCtor, sniffContainer, containerFromMime, VideoContainer } from "./support";
 import { buildTimeline, prepareAudio, Segment, VideoError, VideoTimeline } from "./timeline";
 
@@ -94,6 +102,8 @@ export interface RenderInput {
   surah: Surah;
   /** Arabic ayah texts for the whole surah (index 0 = ayah 1). */
   ayahTexts: string[];
+  /** English translation for the whole surah (index 0 = ayah 1), or [] to show Arabic only. */
+  ayahTranslations: string[];
   backgrounds: Background[];
   mimeType: string;
   signal: AbortSignal;
@@ -104,7 +114,15 @@ export interface RenderResult {
   blob: Blob;
   container: VideoContainer;
   duration: number;
+  /** The backgrounds that actually appear in the video, in order. */
+  backgrounds: Background[];
+  /** Ids of selected backgrounds that failed to load and were left out. */
+  skippedBackgrounds: string[];
 }
+
+/** Used only if every selected video background fails to load. */
+const FALLBACK_BACKGROUND_ID = "geometric";
+const BACKGROUND_TIMEOUT_MS = 25_000;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -133,13 +151,18 @@ function throwIfAborted(signal: AbortSignal) {
   if (signal.aborted) throw new VideoError("cancelled");
 }
 
+/**
+ * Loads the selected background videos. A clip that errors or times out is
+ * left out (and reported) instead of failing the whole render.
+ */
 async function loadBackgroundVideos(
   backgrounds: Background[],
   host: HTMLElement,
   signal: AbortSignal,
   onProgress: (done: number, total: number) => void
-): Promise<Map<string, HTMLVideoElement>> {
+): Promise<{ videos: Map<string, HTMLVideoElement>; failed: string[] }> {
   const videos = new Map<string, HTMLVideoElement>();
+  const failed: string[] = [];
   const list = backgrounds.filter((b): b is VideoBackground => b.kind === "video");
   let done = 0;
   onProgress(0, list.length);
@@ -155,36 +178,39 @@ async function loadBackgroundVideos(
           v.setAttribute("playsinline", "");
           v.setAttribute("muted", "");
           v.preload = "auto";
+          let settled = false;
+          const onAbort = () => finish(new VideoError("cancelled"));
+          const finish = (err?: VideoError) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            signal.removeEventListener("abort", onAbort);
+            if (err) return reject(err);
+            onProgress(++done, list.length);
+            resolve();
+          };
+          const skip = () => {
+            if (settled) return;
+            failed.push(bg.id);
+            videos.delete(bg.id);
+            v.removeAttribute("src");
+            v.load();
+            v.remove();
+            finish();
+          };
+          const timer = setTimeout(skip, BACKGROUND_TIMEOUT_MS);
+          signal.addEventListener("abort", onAbort);
+          v.addEventListener("loadeddata", () => finish(), { once: true });
+          v.addEventListener("error", skip, { once: true });
           v.src = bg.src;
           // iOS Safari only decodes frames for videos that are in the document.
           host.appendChild(v);
           videos.set(bg.id, v);
-          const timer = setTimeout(() => reject(new VideoError("background-load", bg.id)), 30_000);
-          const ok = () => {
-            clearTimeout(timer);
-            onProgress(++done, list.length);
-            resolve();
-          };
-          if (v.readyState >= 2) ok();
-          else {
-            v.addEventListener("loadeddata", ok, { once: true });
-            v.addEventListener(
-              "error",
-              () => {
-                clearTimeout(timer);
-                reject(new VideoError("background-load", bg.id));
-              },
-              { once: true }
-            );
-          }
-          signal.addEventListener("abort", () => {
-            clearTimeout(timer);
-            reject(new VideoError("cancelled"));
-          });
+          if (v.readyState >= 2) finish();
         })
     )
   );
-  return videos;
+  return { videos, failed };
 }
 
 // ── Main render ─────────────────────────────────────────────────────────────
@@ -235,16 +261,22 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
     throwIfAborted(signal);
 
     // 2. Backgrounds + fonts
-    const videos = await loadBackgroundVideos(backgrounds, host, signal, (done, total) =>
+    const { videos, failed } = await loadBackgroundVideos(backgrounds, host, signal, (done, total) =>
       onProgress({ phase: "backgrounds", done, total })
     );
+    let usable = backgrounds.filter((b) => !failed.includes(b.id));
+    if (usable.length === 0) {
+      const fallback = getBackground(FALLBACK_BACKGROUND_ID);
+      usable = fallback ? [fallback] : backgrounds;
+    }
     const quranFont = resolveFontFamily("font-quran", '"Amiri Quran", serif');
     const uiFont = resolveFontFamily("font-ui", "system-ui, sans-serif");
     const brandFont = resolveFontFamily("font-wordmark", "serif");
     if (document.fonts?.load) {
       await Promise.all([
-        document.fonts.load(`48px ${quranFont}`, "بِسۡمِ ٱللَّهِ"),
+        document.fonts.load(`48px ${quranFont}`, "بِسْمِ ٱللَّهِ ۖ ۩"),
         document.fonts.load(`28px ${uiFont}`, "Surah سورة"),
+        document.fonts.load(englishFont(24, uiFont), "In the name of Allah"),
         document.fonts.load(`32px ${brandFont}`, "فاستمعوا له"),
       ]).catch(() => {});
     }
@@ -259,12 +291,13 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
 
     const draw = createFrameDrawer(g, {
       timeline,
-      backgrounds,
+      backgrounds: usable,
       videos,
       surah,
       reciter,
       ps,
       ayahTexts: input.ayahTexts,
+      ayahTranslations: input.ayahTranslations,
       fonts: { quran: quranFont, ui: uiFont, brand: brandFont },
     });
 
@@ -321,7 +354,15 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
     document.addEventListener("visibilitychange", onVisibility);
     cleanups.push(() => document.removeEventListener("visibilitychange", onVisibility));
 
-    await session.ctx.resume().catch(() => {});
+    // resume() stays pending forever without a user gesture, so bound the wait
+    // (and keep Cancel working) instead of hanging the render.
+    await Promise.race([
+      session.ctx.resume().catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+      new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true })),
+    ]);
+    throwIfAborted(signal);
+    if (session.ctx.state !== "running") throw new VideoError("playback-blocked");
     await acquireWakeLock();
     recorder.start(1000);
     clock.start();
@@ -430,7 +471,7 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
     if (!container) throw new VideoError("recorder", "unknown container");
     // Plain container types (no codecs suffix) are the most widely accepted by share targets.
     const blob = new Blob(chunks, { type: container === "mp4" ? "video/mp4" : "video/webm" });
-    return { blob, container, duration: clock.elapsed };
+    return { blob, container, duration: clock.elapsed, backgrounds: usable, skippedBackgrounds: failed };
   } finally {
     if (raf) cancelAnimationFrame(raf);
     cleanups.forEach((fn) => fn());
@@ -454,6 +495,7 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
   }
 }
 
+
 // ── Frame drawing ───────────────────────────────────────────────────────────
 
 interface DrawContext {
@@ -464,10 +506,21 @@ interface DrawContext {
   reciter: Reciter;
   ps: PlayerState;
   ayahTexts: string[];
+  ayahTranslations: string[];
   fonts: { quran: string; ui: string; brand: string };
 }
 
-const TEXT_BOX = { x: 64, y: 330, w: VIDEO_WIDTH - 128, h: 600 };
+interface AyahPlan {
+  passages: Passage[];
+  layouts: PassageLayout[];
+}
+
+const TEXT_BOX = { x: 56, y: 272, w: VIDEO_WIDTH - 112, h: 668 };
+/** Passage changes: crossfade with a small upward drift. */
+const PASSAGE_FADE_SECONDS = 0.6;
+const PASSAGE_DRIFT_PX = 14;
+
+export const QURAN_SOURCES_CREDIT = "Quran text: Tanzil.net (Uthmani) · English: Pickthall (1930, public domain)";
 
 export function createFrameDrawer(g: CanvasRenderingContext2D, d: DrawContext) {
   const W = VIDEO_WIDTH;
@@ -475,21 +528,31 @@ export function createFrameDrawer(g: CanvasRenderingContext2D, d: DrawContext) {
   const n = d.backgrounds.length;
   const slot = d.timeline.total / n;
   const fade = Math.min(1.2, slot / 4);
-  const layouts = new Map<number, TextLayout>();
-  let lastTextKey = "";
-  let textChangedAt = 0;
+  const plans = new Map<number, AyahPlan | null>();
+  let shown: { key: string; ayah: number; index: number; dim: boolean } | null = null;
+  let previous: { ayah: number; index: number; dim: boolean } | null = null;
+  let changedAt = 0;
 
-  const layoutFor = (ayah: number): TextLayout | null => {
-    const cached = layouts.get(ayah);
-    if (cached) return cached;
-    const text = d.ayahTexts[ayah - 1];
-    if (!text) return null;
-    g.save();
-    g.direction = "rtl";
-    const layout = layoutText(g, text, d.fonts.quran, TEXT_BOX.w, TEXT_BOX.h);
-    g.restore();
-    layouts.set(ayah, layout);
-    return layout;
+  // Splits each ayah once into passages that fit the text box, measured with
+  // the real fonts. planPassages checks that the pieces join back to the exact
+  // ayah text and falls back to the whole ayah otherwise.
+  const planFor = (ayah: number): AyahPlan | null => {
+    if (plans.has(ayah)) return plans.get(ayah) ?? null;
+    const arabic = d.ayahTexts[ayah - 1];
+    if (!arabic) {
+      plans.set(ayah, null);
+      return null;
+    }
+    const english = d.ayahTranslations[ayah - 1] ?? "";
+    const fits = (p: Passage) =>
+      layoutPassage(g, p.arabic, p.english, d.fonts, TEXT_BOX.w, TEXT_BOX.h) !== null;
+    const passages = planPassages(arabic, english, fits);
+    const layouts = passages.map(
+      (p) => layoutPassage(g, p.arabic, p.english, d.fonts, TEXT_BOX.w, TEXT_BOX.h, true)!
+    );
+    const plan = { passages, layouts };
+    plans.set(ayah, plan);
+    return plan;
   };
 
   const drawBackground = (bg: Background, t: number, alpha: number) => {
@@ -592,6 +655,24 @@ export function createFrameDrawer(g: CanvasRenderingContext2D, d: DrawContext) {
     g.restore();
   };
 
+  /** Arabic lines, then the English translation in a smaller, dimmer face. */
+  const drawPassage = (layout: PassageLayout, alpha: number, offsetY: number) => {
+    if (alpha <= 0) return;
+    const y0 = TEXT_BOX.y + (TEXT_BOX.h - layout.height) / 2 + offsetY;
+    g.globalAlpha = alpha;
+    let y = y0 + layout.arabicLineHeight / 2;
+    for (const line of layout.arabicLines) {
+      text(line, W / 2, y, arabicFont(layout.arabicSize, d.fonts.quran), "#ffffff", "rtl");
+      y += layout.arabicLineHeight;
+    }
+    y = y0 + layout.arabicLines.length * layout.arabicLineHeight + layout.gap + layout.englishLineHeight / 2;
+    for (const line of layout.englishLines) {
+      text(line, W / 2, y, englishFont(layout.englishSize, d.fonts.ui), "rgba(244,234,211,0.82)", "ltr");
+      y += layout.englishLineHeight;
+    }
+    g.globalAlpha = 1;
+  };
+
   return function draw(t: number, seg: Segment, segProgress: number) {
     // Backgrounds: equal time slots with crossfades between them.
     const i = Math.min(n - 1, Math.floor(t / slot));
@@ -618,11 +699,11 @@ export function createFrameDrawer(g: CanvasRenderingContext2D, d: DrawContext) {
     bottom.addColorStop(1, "rgba(12,9,7,0.80)");
     g.fillStyle = bottom;
     g.fillRect(0, 920, W, H - 920);
-    const center = g.createRadialGradient(W / 2, 630, 40, W / 2, 630, 420);
-    center.addColorStop(0, "rgba(12,9,7,0.35)");
+    const center = g.createRadialGradient(W / 2, 610, 40, W / 2, 610, 440);
+    center.addColorStop(0, "rgba(12,9,7,0.40)");
     center.addColorStop(1, "rgba(12,9,7,0)");
     g.fillStyle = center;
-    g.fillRect(0, 200, W, 860);
+    g.fillRect(0, 180, W, 880);
 
     g.save();
     g.textAlign = "center";
@@ -631,66 +712,70 @@ export function createFrameDrawer(g: CanvasRenderingContext2D, d: DrawContext) {
     g.shadowBlur = 14;
 
     // Header: Surah name, English name + range.
-    text(`سورة ${d.surah.name}`, W / 2, 120, `52px ${d.fonts.quran}`, "#f4ead3");
+    text(`سورة ${d.surah.name}`, W / 2, 112, `52px ${d.fonts.quran}`, "#f4ead3");
     const rangeLabel = d.timeline.fullSurah
       ? `${d.surah.englishName} · Full surah`
       : d.ps.startAyah === d.ps.endAyah
         ? `${d.surah.englishName} · Ayah ${d.ps.startAyah}`
         : `${d.surah.englishName} · Ayahs ${d.ps.startAyah}–${d.ps.endAyah}`;
-    text(rangeLabel, W / 2, 190, `500 26px ${d.fonts.ui}`, "rgba(244,234,211,0.82)", "ltr");
+    text(rangeLabel, W / 2, 180, `500 26px ${d.fonts.ui}`, "rgba(244,234,211,0.82)", "ltr");
     g.shadowBlur = 0;
-    ornamentLine(236, 150);
+    ornamentLine(224, 150);
     g.shadowBlur = 14;
 
-    // Body: the current ayah, or the surah title for full-surah recitations
+    // Body: the current passage, or the surah title for full-surah recitations
     // (there's no verified per-ayah timing for those files, so we never guess
     // which ayah is being recited).
     if (d.timeline.fullSurah) {
       text(d.surah.name, W / 2, 600, `110px ${d.fonts.quran}`, "#ffffff");
       text("تلاوة السورة كاملة", W / 2, 760, `500 30px ${d.fonts.ui}`, "rgba(244,234,211,0.85)");
     } else {
-      let ayah: number | null = null;
+      // Which ayah and how far through its recitation. Ayah boundaries come
+      // from the per-ayah audio files (exact); the passage within the ayah is
+      // picked by letter share (approximate, see passages.ts).
+      let ayah: number;
       let dim = false;
-      let pageProgress = segProgress;
-      if (seg.kind === "recitation") ayah = seg.ayah;
+      let progress = segProgress;
+      if (seg.kind === "recitation") ayah = seg.ayah ?? d.ps.startAyah;
       else if (seg.kind === "pause") {
-        ayah = seg.afterAyah;
+        ayah = seg.afterAyah ?? d.ps.startAyah;
         dim = true;
-        pageProgress = 1;
+        progress = 1;
       } else if (seg.kind === "intro") {
         ayah = d.ps.startAyah;
         dim = true;
-        pageProgress = 0;
+        progress = 0;
       } else {
         ayah = d.ps.endAyah;
-        pageProgress = 1;
+        progress = 1;
       }
 
-      const layout = ayah ? layoutFor(ayah) : null;
-      if (ayah && layout) {
-        const pageIndex = Math.min(layout.pages.length - 1, Math.floor(pageProgress * layout.pages.length));
-        const key = `${ayah}:${pageIndex}`;
-        if (key !== lastTextKey) {
-          lastTextKey = key;
-          textChangedAt = t;
+      const plan = planFor(ayah);
+      if (plan) {
+        const index = passageIndexAt(plan.passages, progress);
+        const key = `${ayah}:${index}`;
+        if (!shown || shown.key !== key) {
+          previous = shown ? { ayah: shown.ayah, index: shown.index, dim: shown.dim } : null;
+          shown = { key, ayah, index, dim };
+          changedAt = t;
         }
-        const fadeIn = Math.min(1, (t - textChangedAt) / 0.35);
-        const lines = layout.pages[pageIndex];
-        const blockH = lines.length * layout.lineHeight;
-        const y0 = TEXT_BOX.y + (TEXT_BOX.h - blockH) / 2 + layout.lineHeight / 2;
-        g.globalAlpha = (dim ? 0.6 : 1) * fadeIn;
-        lines.forEach((line, li) => {
-          text(line, W / 2, y0 + li * layout.lineHeight, `${layout.fontSize}px ${d.fonts.quran}`, "#ffffff");
-        });
-        g.globalAlpha = 1;
+        shown.dim = dim;
+        const raw = Math.min(1, (t - changedAt) / PASSAGE_FADE_SECONDS);
+        const p = raw * raw * (3 - 2 * raw); // smoothstep
+        const prevPlan = previous && p < 1 ? planFor(previous.ayah) : null;
+        if (previous && prevPlan) {
+          drawPassage(prevPlan.layouts[previous.index], (1 - p) * (previous.dim ? 0.6 : 1), -PASSAGE_DRIFT_PX * p);
+        }
+        drawPassage(plan.layouts[index], p * (dim ? 0.6 : 1), PASSAGE_DRIFT_PX * (1 - p));
+
         g.shadowBlur = 0;
-        ayahBadge(ayah, W / 2, TEXT_BOX.y + TEXT_BOX.h + 40);
+        ayahBadge(ayah, W / 2, TEXT_BOX.y + TEXT_BOX.h + 34);
         g.shadowBlur = 14;
         if (d.timeline.repeats > 1 && seg.kind === "recitation") {
           text(
             `التكرار ${toArabicDigits(seg.repeat)} / ${toArabicDigits(d.timeline.repeats)}`,
             W / 2,
-            TEXT_BOX.y + TEXT_BOX.h + 96,
+            TEXT_BOX.y + TEXT_BOX.h + 86,
             `500 22px ${d.fonts.ui}`,
             "rgba(244,234,211,0.75)"
           );
@@ -699,21 +784,26 @@ export function createFrameDrawer(g: CanvasRenderingContext2D, d: DrawContext) {
     }
 
     // Footer: reciter + brand.
-    text(d.reciter.arabicName, W / 2, 1100, `600 28px ${d.fonts.ui}`, "#f4ead3");
-    text(d.reciter.name, W / 2, 1140, `400 20px ${d.fonts.ui}`, "rgba(244,234,211,0.7)", "ltr");
+    text(d.reciter.arabicName, W / 2, 1086, `600 28px ${d.fonts.ui}`, "#f4ead3");
+    text(d.reciter.name, W / 2, 1122, `400 20px ${d.fonts.ui}`, "rgba(244,234,211,0.7)", "ltr");
     g.shadowBlur = 0;
-    ornamentLine(1178, 110);
+    ornamentLine(1154, 110);
     g.shadowBlur = 14;
-    text("فاستمعوا له", W / 2, 1220, `700 34px ${d.fonts.brand}`, "#d9b563");
+    text("فاستمعوا له", W / 2, 1194, `700 34px ${d.fonts.brand}`, "#d9b563");
 
-    // Attribution required by CC BY, shown while that background is on screen.
+    // Source credits travel with every shared copy: the Quran text/translation
+    // sources, and the CC BY attribution while that background is on screen.
+    g.shadowBlur = 6;
+    if (!d.timeline.fullSurah) {
+      const credit = d.ayahTranslations.length ? QURAN_SOURCES_CREDIT : "Quran text: Tanzil.net (Uthmani)";
+      text(credit, W / 2, 1234, `400 14px ${d.fonts.ui}`, "rgba(244,234,211,0.68)", "ltr");
+    }
     if (dominant.credit.licenseKind === "cc-by-4.0") {
-      g.shadowBlur = 6;
       text(
         `Background: “${dominant.credit.title}” by ${dominant.credit.author} · CC BY 4.0`,
         W / 2,
-        1262,
-        `400 15px ${d.fonts.ui}`,
+        1260,
+        `400 14px ${d.fonts.ui}`,
         "rgba(244,234,211,0.75)",
         "ltr"
       );
